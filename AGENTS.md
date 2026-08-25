@@ -1,6 +1,6 @@
 # BLCU-PPT-Template
 
-A skill that generates PPT files or web-based PPT programs from the BLCU presentation template (see `docs/templates/blcu-report.pptx`, kept local-only and gitignored), driven by user-supplied material and prompts. Designed to support multiple templates in the future.
+A skill that generates PPT files or web-based PPT programs from the BLCU presentation template (see `templates/blcu-report/blcu-report.pptx`, kept local-only and gitignored), driven by user-supplied material and prompts. Designed to support multiple templates in the future.
 
 ## Agent skills
 
