@@ -13,3 +13,6 @@ build/
 # OS / editor
 .DS_Store
 Thumbs.db
+
+# local issue-body staging
+.scratch/
