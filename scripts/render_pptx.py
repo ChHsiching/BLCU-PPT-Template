@@ -248,7 +248,7 @@ def _math_paragraph(omml) -> etree._Element:
     return p
 
 
-def _textbox_shape(slide_el, name: str, region: dict, shape_id: int,
+def _textbox_shape(name: str, region: dict, shape_id: int,
                    anchor: str = "t") -> etree._Element:
     x, y = int(Inches(region["x"])), int(Inches(region["y"]))
     cx, cy = int(Inches(region["w"])), int(Inches(region["h"]))
@@ -356,7 +356,7 @@ def _add_caption(slide_el, slot: dict, text: str, manifest: dict, index: int) ->
         "w": slot["w"],
         "h": CAPTION_STRIP_HEIGHT_IN,
     }
-    box = _textbox_shape(slide_el, f"Caption{index}", strip, _next_shape_id(slide_el))
+    box = _textbox_shape(f"Caption{index}", strip, _next_shape_id(slide_el))
     _fill_textbox(box, [_text_paragraph(text, size_pt=cap["size_pt"],
                                         latin=cap["face"], ea=cap["face"],
                                         algn="ctr")])
@@ -431,10 +431,14 @@ def _page_texts(page: dict) -> list[str]:
     return [b["text"] for b in page["blocks"] if b["type"] == "text"]
 
 
+def _page_title(page: dict) -> str:
+    return next(b["text"] for b in page["blocks"] if b["type"] == "title")
+
+
 def _fill_title(slide_el, page: dict, arch: dict, manifest: dict, archetype: str,
                 algn: str | None = None) -> None:
     """Fill the title placeholder of a cloned slide at the manifest region."""
-    title_text = next(b["text"] for b in page["blocks"] if b["type"] == "title")
+    title_text = _page_title(page)
     title = find_placeholder(slide_el, "title")
     if title is None:
         raise RenderError(f"{archetype} clone lost its title placeholder")
@@ -484,7 +488,7 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
     stats.formulas_fallback += len(fallbacks)
 
     if native:
-        box = _textbox_shape(el, "FormulaArea", arch["regions"]["formula"],
+        box = _textbox_shape("FormulaArea", arch["regions"]["formula"],
                              _next_shape_id(el))
         _fill_textbox(box, native)
         _sp_tree(el).append(box)
@@ -513,7 +517,7 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
         else:
             region, latin, face, size = (arch["regions"]["text_full"], body["face"],
                                          body["face"], body["size_pt"])
-        box = _textbox_shape(el, "TextArea" if formulas else "TextFullArea",
+        box = _textbox_shape("TextArea" if formulas else "TextFullArea",
                              region, _next_shape_id(el))
         _fill_textbox(box, [_text_paragraph(t, size_pt=size, latin=latin, ea=face)
                             for t in texts])
@@ -528,20 +532,20 @@ def fill_agenda(slide, page: dict, arch: dict, manifest: dict) -> None:
     the centered label box instead.
     """
     el = slide.part._element
-    label_text = next(b["text"] for b in page["blocks"] if b["type"] == "title")
+    label_text = _page_title(page)
     items = [item for b in page["blocks"] if b["type"] == "list" for item in b["items"]]
     label_type = manifest["typography"]["agenda_label"]
     list_type = manifest["typography"]["agenda_list"]
 
     _strip_content_shapes(el)
-    label = _textbox_shape(el, "AgendaLabel", arch["regions"]["label"],
+    label = _textbox_shape("AgendaLabel", arch["regions"]["label"],
                            _next_shape_id(el), anchor="ctr")
     _fill_textbox(label, [_text_paragraph(label_text, size_pt=label_type["size_pt"],
                                           latin=label_type["face"],
                                           ea=label_type["face"], algn="ctr")])
     _sp_tree(el).append(label)
     if items:  # a list block is optional; never emit an empty txBody
-        box = _textbox_shape(el, "AgendaList", arch["regions"]["list"], _next_shape_id(el))
+        box = _textbox_shape("AgendaList", arch["regions"]["list"], _next_shape_id(el))
         _fill_textbox(box, [_text_paragraph(item, size_pt=list_type["size_pt"],
                                             latin=list_type["face"], ea=list_type["face"])
                             for item in items])
@@ -558,7 +562,7 @@ def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
     _fill_title(el, page, arch, manifest, "text-image")
 
     if subhead is not None:
-        box = _textbox_shape(el, "SubheadArea", arch["regions"]["subhead"],
+        box = _textbox_shape("SubheadArea", arch["regions"]["subhead"],
                              _next_shape_id(el))
         _fill_textbox(box, [_text_paragraph(subhead,
                                             size_pt=manifest["typography"]["subhead_size_pt"],
@@ -578,7 +582,7 @@ def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
                 paragraphs.append(_text_paragraph(f"- {item}", size_pt=size,
                                                   latin=body["face"], ea=body["face"]))
     if paragraphs:
-        box = _textbox_shape(el, "TextArea", arch["regions"]["text"], _next_shape_id(el))
+        box = _textbox_shape("TextArea", arch["regions"]["text"], _next_shape_id(el))
         _fill_textbox(box, paragraphs)
         _sp_tree(el).append(box)
 
@@ -610,7 +614,7 @@ def fill_chart_focus(slide, page: dict, arch: dict, manifest: dict,
                         arch["regions"]["chart"])
 
     if texts:
-        box = _textbox_shape(el, "CommentArea", arch["regions"]["comment"],
+        box = _textbox_shape("CommentArea", arch["regions"]["comment"],
                              _next_shape_id(el))
         _fill_textbox(box, [_text_paragraph(t, size_pt=body["secondary_size_pt"],
                                             latin=body["face"], ea=body["face"])
