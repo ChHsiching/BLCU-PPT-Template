@@ -8,12 +8,17 @@ Each deck page is rendered by deep-cloning the archetype's source slide at the
 XML level (new slide part, relationships re-registered with rId remapping,
 sldIdLst + [Content_Types].xml maintained by python-pptx on save), stripping the
 template author's content layer while keeping placeholders and the master brand
-layer, then rebuilding content boxes at the manifest regions. Formulas go
-LaTeX -> MathML -> OMML (MML2OMML.XSL) as native Cambria Math objects in the
+layer, then rebuilding content boxes at the manifest regions. Archetypes whose
+source slide has overflowing content boxes (agenda, chart-focus) are rebuilt at
+the manifest's safe geometry, never at the original boxes' geometry. Formulas
+go LaTeX -> MathML -> OMML (MML2OMML.XSL) as native Cambria Math objects in the
 same mc:AlternateContent/a14:m serialization the template itself uses; a
 formula whose conversion fails falls back to a rendered image inside the
-formula region. Original template slides are deleted high-index-first after
-cloning. T3 scope: cover and text-formula archetypes only.
+formula region. Images from deck.json blocks are contain-fitted into the
+manifest regions/slots (aspect preserved, centered); captions render as 10pt
+overlay strips at the owning slot's internal bottom edge. Original template
+slides are deleted high-index-first after cloning. All 6 archetypes are
+supported: cover, agenda, text-formula, text-image, chart-focus, closing.
 
 Exit codes: 0 rendered, 1 deck failed validation, 2 usage / IO / unsupported
 archetype / environment error. Decks are validated (scripts/validate_deck.py,
@@ -47,7 +52,9 @@ from pptx.util import Inches
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import validate_deck as vd  # noqa: E402
 
-SUPPORTED_ARCHETYPES = ("cover", "text-formula")
+SUPPORTED_ARCHETYPES = (
+    "cover", "agenda", "text-formula", "text-image", "chart-focus", "closing",
+)
 
 NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 NS_M = "http://schemas.openxmlformats.org/officeDocument/2006/math"
@@ -241,7 +248,8 @@ def _math_paragraph(omml) -> etree._Element:
     return p
 
 
-def _textbox_shape(slide_el, name: str, region: dict, shape_id: int) -> etree._Element:
+def _textbox_shape(name: str, region: dict, shape_id: int,
+                   anchor: str = "t") -> etree._Element:
     x, y = int(Inches(region["x"])), int(Inches(region["y"]))
     cx, cy = int(Inches(region["w"])), int(Inches(region["h"]))
     xml = (
@@ -255,7 +263,7 @@ def _textbox_shape(slide_el, name: str, region: dict, shape_id: int) -> etree._E
         "<a:noFill/><a:ln w=\"0\"><a:noFill/></a:ln>"
         "</p:spPr>"
         "<p:txBody>"
-        '<a:bodyPr lIns="90000" tIns="45000" rIns="90000" bIns="45000" anchor="t" wrap="square">'
+        f'<a:bodyPr lIns="90000" tIns="45000" rIns="90000" bIns="45000" anchor="{anchor}" wrap="square">'
         "<a:noAutofit/></a:bodyPr>"
         "<a:lstStyle/>"
         "</p:txBody>"
@@ -313,6 +321,46 @@ def _fill_placeholder(sp_el, text: str, *, size_pt: int, latin: str, ea: str,
                       algn: str | None = None) -> None:
     _fill_textbox(sp_el, [_text_paragraph(text, size_pt=size_pt, latin=latin,
                                           ea=ea, algn=algn)])
+
+
+# ---------------------------------------------------------------------------
+# images (deck-referenced material files) and captions
+# ---------------------------------------------------------------------------
+
+CAPTION_STRIP_HEIGHT_IN = 0.25  # overlay strip height inside the owning slot
+
+
+def _add_fitted_picture(slide, image_path: Path, slot: dict):
+    """Contain-fit an image into a manifest slot: aspect kept, centered."""
+    image_path = Path(image_path)
+    if not image_path.is_file():
+        raise RenderError(f"image file not found: {image_path}")
+    left, top = Inches(slot["x"]), Inches(slot["y"])
+    slot_w, slot_h = Inches(slot["w"]), Inches(slot["h"])
+    with open(image_path, "rb") as stream:
+        pic = slide.shapes.add_picture(stream, left, top, width=slot_w)
+    if pic.height > slot_h:  # width-bound fit overflows: rebind to height
+        pic.width = int(pic.width * (slot_h / pic.height))
+        pic.height = slot_h
+    pic.left = int(left + (slot_w - pic.width) / 2)
+    pic.top = int(top + (slot_h - pic.height) / 2)
+    return pic
+
+
+def _add_caption(slide_el, slot: dict, text: str, manifest: dict, index: int) -> None:
+    """10pt overlay strip pinned to the slot's internal bottom edge."""
+    cap = manifest["typography"]["caption"]
+    strip = {
+        "x": slot["x"],
+        "y": slot["y"] + slot["h"] - CAPTION_STRIP_HEIGHT_IN,
+        "w": slot["w"],
+        "h": CAPTION_STRIP_HEIGHT_IN,
+    }
+    box = _textbox_shape(f"Caption{index}", strip, _next_shape_id(slide_el))
+    _fill_textbox(box, [_text_paragraph(text, size_pt=cap["size_pt"],
+                                        latin=cap["face"], ea=cap["face"],
+                                        algn="ctr")])
+    _sp_tree(slide_el).append(box)
 
 
 def _strip_content_shapes(slide_el) -> None:
@@ -383,20 +431,30 @@ def _page_texts(page: dict) -> list[str]:
     return [b["text"] for b in page["blocks"] if b["type"] == "text"]
 
 
+def _page_title(page: dict) -> str:
+    return next(b["text"] for b in page["blocks"] if b["type"] == "title")
+
+
+def _fill_title(slide_el, page: dict, arch: dict, manifest: dict, archetype: str,
+                algn: str | None = None) -> None:
+    """Fill the title placeholder of a cloned slide at the manifest region."""
+    title_text = _page_title(page)
+    title = find_placeholder(slide_el, "title")
+    if title is None:
+        raise RenderError(f"{archetype} clone lost its title placeholder")
+    _set_position(title, arch["regions"]["title"])
+    _fill_placeholder(title, title_text, size_pt=_title_size_pt(title_text, manifest),
+                      latin=manifest["typography"]["title"]["latin"],
+                      ea=manifest["typography"]["title"]["face"], algn=algn)
+
+
 def fill_cover(slide, page: dict, arch: dict, manifest: dict) -> None:
     el = slide.part._element
-    title_text = next(b["text"] for b in page["blocks"] if b["type"] == "title")
     sub = manifest["typography"]["cover_subtitle"]
     text = " ".join(_page_texts(page))
 
     _strip_content_shapes(el)
-    title = find_placeholder(el, "title")
-    if title is None:
-        raise RenderError("cover clone lost its title placeholder")
-    _set_position(title, arch["regions"]["title"])
-    _fill_placeholder(title, title_text, size_pt=_title_size_pt(title_text, manifest),
-                      latin=manifest["typography"]["title"]["latin"],
-                      ea=manifest["typography"]["title"]["face"], algn="ctr")
+    _fill_title(el, page, arch, manifest, "cover", algn="ctr")
     subtitle = find_placeholder(el, "body")
     if subtitle is None:
         raise RenderError("cover clone lost its subtitle placeholder")
@@ -408,7 +466,6 @@ def fill_cover(slide, page: dict, arch: dict, manifest: dict) -> None:
 def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
                       xsl_path: Path | None, stats) -> None:
     el = slide.part._element
-    title_text = next(b["text"] for b in page["blocks"] if b["type"] == "title")
     formulas = [b["latex"] for b in page["blocks"] if b["type"] == "formula"]
     texts = _page_texts(page)
     accent = manifest["typography"]["accent"]
@@ -416,13 +473,7 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
     formula_type = manifest["typography"]["formula"]
 
     _strip_content_shapes(el)
-    title = find_placeholder(el, "title")
-    if title is None:
-        raise RenderError("text-formula clone lost its title placeholder")
-    _set_position(title, arch["regions"]["title"])
-    _fill_placeholder(title, title_text, size_pt=_title_size_pt(title_text, manifest),
-                      latin=manifest["typography"]["title"]["latin"],
-                      ea=manifest["typography"]["title"]["face"])
+    _fill_title(el, page, arch, manifest, "text-formula")
 
     # formula area: native OMML paragraphs, image fallbacks stacked below
     native, fallbacks = [], []
@@ -437,7 +488,7 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
     stats.formulas_fallback += len(fallbacks)
 
     if native:
-        box = _textbox_shape(el, "FormulaArea", arch["regions"]["formula"],
+        box = _textbox_shape("FormulaArea", arch["regions"]["formula"],
                              _next_shape_id(el))
         _fill_textbox(box, native)
         _sp_tree(el).append(box)
@@ -466,9 +517,107 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
         else:
             region, latin, face, size = (arch["regions"]["text_full"], body["face"],
                                          body["face"], body["size_pt"])
-        box = _textbox_shape(el, "TextArea" if formulas else "TextFullArea",
+        box = _textbox_shape("TextArea" if formulas else "TextFullArea",
                              region, _next_shape_id(el))
         _fill_textbox(box, [_text_paragraph(t, size_pt=size, latin=latin, ea=face)
+                            for t in texts])
+        _sp_tree(el).append(box)
+
+
+def fill_agenda(slide, page: dict, arch: dict, manifest: dict) -> None:
+    """Rebuild label + list at the manifest's safe geometry.
+
+    The agenda source (slide 2) has no title placeholder and both of its
+    original content boxes overflow the canvas; the page's title block fills
+    the centered label box instead.
+    """
+    el = slide.part._element
+    label_text = _page_title(page)
+    items = [item for b in page["blocks"] if b["type"] == "list" for item in b["items"]]
+    label_type = manifest["typography"]["agenda_label"]
+    list_type = manifest["typography"]["agenda_list"]
+
+    _strip_content_shapes(el)
+    label = _textbox_shape("AgendaLabel", arch["regions"]["label"],
+                           _next_shape_id(el), anchor="ctr")
+    _fill_textbox(label, [_text_paragraph(label_text, size_pt=label_type["size_pt"],
+                                          latin=label_type["face"],
+                                          ea=label_type["face"], algn="ctr")])
+    _sp_tree(el).append(label)
+    if items:  # a list block is optional; never emit an empty txBody
+        box = _textbox_shape("AgendaList", arch["regions"]["list"], _next_shape_id(el))
+        _fill_textbox(box, [_text_paragraph(item, size_pt=list_type["size_pt"],
+                                            latin=list_type["face"], ea=list_type["face"])
+                            for item in items])
+        _sp_tree(el).append(box)
+
+
+def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
+                    image_root: Path | None) -> None:
+    el = slide.part._element
+    subhead = next((b["text"] for b in page["blocks"] if b["type"] == "subhead"), None)
+    body = manifest["typography"]["body"]
+
+    _strip_content_shapes(el)
+    _fill_title(el, page, arch, manifest, "text-image")
+
+    if subhead is not None:
+        box = _textbox_shape("SubheadArea", arch["regions"]["subhead"],
+                             _next_shape_id(el))
+        _fill_textbox(box, [_text_paragraph(subhead,
+                                            size_pt=manifest["typography"]["subhead_size_pt"],
+                                            latin=body["face"], ea=body["face"])])
+        _sp_tree(el).append(box)
+
+    # text blocks and list items share the text region; the template author
+    # writes bullet lines as "- " paragraphs in that box (slide 7)
+    size = body["secondary_size_pt"]
+    paragraphs = []
+    for b in page["blocks"]:
+        if b["type"] == "text":
+            paragraphs.append(_text_paragraph(b["text"], size_pt=size,
+                                              latin=body["face"], ea=body["face"]))
+        elif b["type"] == "list":
+            for item in b["items"]:
+                paragraphs.append(_text_paragraph(f"- {item}", size_pt=size,
+                                                  latin=body["face"], ea=body["face"]))
+    if paragraphs:
+        box = _textbox_shape("TextArea", arch["regions"]["text"], _next_shape_id(el))
+        _fill_textbox(box, paragraphs)
+        _sp_tree(el).append(box)
+
+    slots = arch["regions"]["image_slots"]
+    images = [b for b in page["blocks"] if b["type"] == "image"]
+    if len(images) > len(slots):
+        raise RenderError(
+            f"text-image page carries {len(images)} images but the manifest has "
+            f"only {len(slots)} image slots")
+    for i, block in enumerate(images):
+        _add_fitted_picture(slide, vd.resolve_image_path(block["path"], image_root), slots[i])
+        if block.get("caption"):
+            _add_caption(el, slots[i], block["caption"], manifest, i + 1)
+
+
+def fill_chart_focus(slide, page: dict, arch: dict, manifest: dict,
+                     image_root: Path | None) -> None:
+    el = slide.part._element
+    texts = _page_texts(page)
+    images = [b for b in page["blocks"] if b["type"] == "image"]
+    body = manifest["typography"]["body"]
+
+    _strip_content_shapes(el)
+    _fill_title(el, page, arch, manifest, "chart-focus")
+
+    if len(images) != 1:
+        raise RenderError(f"chart-focus expects exactly 1 image block, got {len(images)}")
+    _add_fitted_picture(slide, vd.resolve_image_path(images[0]["path"], image_root),
+                        arch["regions"]["chart"])
+
+    if texts:
+        box = _textbox_shape("CommentArea", arch["regions"]["comment"],
+                             _next_shape_id(el))
+        _fill_textbox(box, [_text_paragraph(t, size_pt=body["secondary_size_pt"],
+                                            latin=body["face"], ea=body["face"])
                             for t in texts])
         _sp_tree(el).append(box)
 
@@ -491,13 +640,18 @@ class RenderResult:
 
 
 def render_deck(deck: dict, manifest: dict, template_pptx: Path,
-                xsl_path: Path | None = None) -> RenderResult:
-    """Render a validated deck dict against a template manifest."""
+                xsl_path: Path | None = None,
+                image_root: Path | None = None) -> RenderResult:
+    """Render a validated deck dict against a template manifest.
+
+    image_root is the directory deck image paths resolve against (the deck
+    file's directory at the CLI layer), mirroring validate_deck.
+    """
     for i, page in enumerate(deck.get("pages", [])):
         if page.get("archetype") not in SUPPORTED_ARCHETYPES:
             raise RenderError(
                 f"pages[{i}]: archetype '{page.get('archetype')}' is not implemented "
-                f"in renderer-pptx T3 (supported: {', '.join(SUPPORTED_ARCHETYPES)})"
+                f"in renderer-pptx (supported: {', '.join(SUPPORTED_ARCHETYPES)})"
             )
 
     template_pptx = Path(template_pptx)
@@ -519,10 +673,17 @@ def render_deck(deck: dict, manifest: dict, template_pptx: Path,
     for page in deck["pages"]:
         slide = clone_slide(prs, sources[page["archetype"]])
         arch = manifest["archetypes"][page["archetype"]]
-        if page["archetype"] == "cover":
+        name = page["archetype"]
+        if name in ("cover", "closing"):  # closing is a content variant of cover
             fill_cover(slide, page, arch, manifest)
-        else:
+        elif name == "agenda":
+            fill_agenda(slide, page, arch, manifest)
+        elif name == "text-formula":
             fill_text_formula(slide, page, arch, manifest, xsl_path, stats)
+        elif name == "text-image":
+            fill_text_image(slide, page, arch, manifest, image_root)
+        else:  # chart-focus; scope loop above guarantees the closed set
+            fill_chart_focus(slide, page, arch, manifest, image_root)
         stats.pages += 1
 
     _delete_leading_slides(prs, original_count)
@@ -585,7 +746,7 @@ def main(argv=None) -> int:
               f"{template_pptx}", file=sys.stderr)
         return 2
     try:
-        result = render_deck(deck, manifest, template_pptx)
+        result = render_deck(deck, manifest, template_pptx, image_root=deck_dir)
         result.presentation.save(args.out)
     except RenderError as exc:
         print(f"error: {exc}", file=sys.stderr)

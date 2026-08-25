@@ -1,10 +1,12 @@
-"""Seam-1 pipeline tests for scripts/render_pptx.py (T3 scope: cover + text-formula).
+"""Seam-1 pipeline tests for scripts/render_pptx.py (all 6 archetypes).
 
-Contract under test: a deck.json containing only cover and text-formula pages
-renders against the real template original via Clone & Fill; the output reopens
-with python-pptx carrying the right page count, title text, native OMML
-formulas, manifest-region geometry, master branding, and zero template residue.
-The template original must be byte-identical after rendering.
+Contract under test: a deck.json renders against the real template original via
+Clone & Fill; the output reopens with python-pptx carrying the right page
+count, per-page titles, native OMML formulas, embedded images, manifest-region
+geometry, master branding, and zero template residue. deck_pptx.json exercises
+cover + text-formula in depth (T3); deck.json is the T2 full-archetype fixture
+covering agenda / text-image / chart-focus / closing too (T4). The template
+original must be byte-identical after rendering.
 """
 import hashlib
 import json
@@ -24,6 +26,8 @@ sys.path.insert(0, str(SCRIPTS_DIR))
 import render_pptx as rp  # noqa: E402
 
 FIXTURE_DECK = REPO / "tests" / "fixtures" / "deck_pptx.json"
+FULL_DECK = REPO / "tests" / "fixtures" / "deck.json"
+FIXTURE_DIR = REPO / "tests" / "fixtures"
 TEMPLATE_DIR = REPO / "templates" / "blcu-report"
 TEMPLATE_PPTX = TEMPLATE_DIR / "blcu-report.pptx"
 MANIFEST_PATH = TEMPLATE_DIR / "manifest.json"
@@ -33,17 +37,31 @@ NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 NS_M = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
 
-# Original text from template slides 1 and 3 (the two clone sources): none of it
-# may survive into a rendered deck.
+# Original text from the template's clone-source slides (1, 2, 3, 7, 18):
+# none of it may survive into a rendered deck.
 TEMPLATE_RESIDUE = [
+    # slide 1 (cover / closing source)
     "阿里天池亚军方案复现",
     "汇报人:赵法科",
+    # slide 2 (agenda source)
+    "算法思想",
+    "一 预处理：预处理",
+    "序列×参数并行评估",
+    # slide 3 (text-formula source)
     "预处理（简化",
     "旋转枚举）",
     "原版做法",
     "简化：严格外包简化",
     "凹顶点删除",
     "凸顶点对合并",
+    # slide 7 (text-image source)
+    "预处理（NFP+IFP+NFP预计算）",
+    "待放件",
+    "Minko",
+    # slide 18 (chart-focus source)
+    "实验结果+问题分析",
+    "和autonest对比",
+    "packingUI",
 ]
 
 
@@ -105,6 +123,19 @@ def assert_region(sp, region):
     assert list(region_of(sp)) == pytest.approx(
         [Inches(region[k]) for k in ("x", "y", "w", "h")], abs=2
     )
+
+
+def assert_fitted_in(pic, slot):
+    """Picture contain-fits its slot: inside, centered, tight on one axis."""
+    sx, sy, sw, sh = (Inches(slot[k]) for k in ("x", "y", "w", "h"))
+    left, top, width, height = region_of(pic)
+    assert left >= sx - 2 and top >= sy - 2
+    assert left + width <= sx + sw + 2 and top + height <= sy + sh + 2
+    # contain-fit is tight on the binding axis
+    assert width == pytest.approx(sw, abs=2) or height == pytest.approx(sh, abs=2)
+    # centered on both axes
+    assert left - sx == pytest.approx(sx + sw - (left + width), abs=4)
+    assert top - sy == pytest.approx(sy + sh - (top + height), abs=4)
 
 
 def run_font(sp):
@@ -300,24 +331,16 @@ def test_cli_refuses_invalid_deck(tmp_path):
     assert not out_path.exists()
 
 
-def test_cli_refuses_unsupported_archetype(tmp_path):
-    deck = load("deck_pptx.json")
-    # a validation-clean agenda page: refusal must come from T3 scope, not budgets
-    deck["pages"][2] = {
-        "archetype": "agenda",
-        "blocks": [
-            { "type": "title", "text": "汇报大纲" },
-            { "type": "list", "items": ["一 研究背景", "二 相关工作"] },
-        ],
-    }
-    scoped = tmp_path / "scoped.json"
-    scoped.write_text(json.dumps(deck, ensure_ascii=False), encoding="utf-8")
-    out_path, proc = render(tmp_path, scoped)
-    assert proc.returncode == 2
-    combined = proc.stderr + proc.stdout
-    assert "agenda" in combined
-    assert "cover" in combined and "text-formula" in combined
-    assert not out_path.exists()
+def test_render_deck_refuses_unimplemented_archetype():
+    deck = load("deck.json")
+    # a validation-clean shape: only render_deck's archetype scope can refuse it
+    deck["pages"][0]["archetype"] = "unicorn"
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    with pytest.raises(rp.RenderError) as excinfo:
+        rp.render_deck(deck, manifest, TEMPLATE_PPTX, image_root=FIXTURE_DIR)
+    message = str(excinfo.value)
+    assert "unicorn" in message
+    assert "cover" in message and "closing" in message
 
 
 def test_cli_refuses_to_overwrite_template(tmp_path):
@@ -350,3 +373,145 @@ def test_cli_reports_env_errors_as_exit_2(tmp_path):
     )
     assert proc.returncode == 2
     assert "cannot write output" in proc.stderr
+
+
+# ---------------------------------------------------------------------------
+# T4: the T2 full-archetype fixture (all 6 archetypes, formulas, images,
+# captions) renders end to end
+# ---------------------------------------------------------------------------
+
+@requires_math
+def test_cli_renders_full_fixture(tmp_path):
+    out_path, proc = render(tmp_path, FULL_DECK)
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert out_path.is_file()
+    # every archetype in the deck was exercised
+    assert "7 page(s)" in proc.stdout
+
+
+@requires_math
+def test_render_full_fixture(tmp_path):
+    deck = load("deck.json")
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    arch = manifest["archetypes"]
+    result = rp.render_deck(deck, manifest, TEMPLATE_PPTX, image_root=FIXTURE_DIR)
+    prs = result.presentation
+
+    # -- page count, order, layouts
+    assert len(prs.slides) == len(deck["pages"]) == 7
+    assert [s.slide_layout.name for s in prs.slides] == [
+        "三logo标题页", "标题和内容", "标题和内容",
+        "标题和内容", "标题和内容", "标题和内容", "三logo标题页",
+    ]
+
+    # -- every page carries its deck title (pages with a title placeholder:
+    #    cover, text-formula, text-image, chart-focus, closing; the agenda
+    #    page's title block lands in the rebuilt label box, asserted below)
+    for i, page in enumerate(deck["pages"]):
+        if page["archetype"] == "agenda":
+            continue
+        title = by_ph(prs.slides[i], "title")
+        assert title is not None, f"slide {i + 1} lost its title placeholder"
+        assert title.text_frame.text == page["blocks"][0]["text"], f"slide {i + 1} title"
+
+    # -- page 2: agenda = rebuilt safe geometry, no title placeholder at all
+    agenda = prs.slides[1]
+    assert by_ph(agenda, "title") is None  # slide 2 carries no title placeholder
+    assert by_ph(agenda, "sldNum") is not None
+    boxes = non_placeholder_shapes(agenda)
+    assert len(boxes) == 2
+    label, item_list = sorted(boxes, key=lambda sp: sp.top)
+    regions = arch["agenda"]["regions"]
+    assert_region(label, regions["label"])
+    assert label.text_frame.text == deck["pages"][1]["blocks"][0]["text"]
+    assert run_font(label) == (48, "黑体", "黑体")
+    assert_region(item_list, regions["list"])
+    assert item_list.text_frame.text == "\n".join(deck["pages"][1]["blocks"][1]["items"])
+    assert run_font(item_list) == (24, "黑体", "黑体")
+    # the acceptance check: nothing on the agenda page leaves the 13.33x7.5 canvas
+    canvas_w, canvas_h = Inches(13.3333), Inches(7.5)
+    for sp in shapes(agenda):
+        assert sp.left >= 0 and sp.top >= 0
+        assert sp.left + sp.width <= canvas_w + 2
+        assert sp.top + sp.height <= canvas_h + 2
+    # the safe geometry replaces the original overflow: list bottom at 6.8, not 10.0
+    assert item_list.top + item_list.height == pytest.approx(Inches(6.8), abs=2)
+
+    # -- page 3 still carries its native OMML formulas
+    assert omath_count(prs.slides[2]) == 2
+
+    # -- page 5: text-image = subhead + text/list + fitted images + caption
+    ti = prs.slides[4]
+    ti_page = deck["pages"][4]
+    ti_regions = arch["text-image"]["regions"]
+    title = by_ph(ti, "title")
+    assert title.text_frame.text == ti_page["blocks"][0]["text"]
+    assert_region(title, ti_regions["title"])
+    boxes = non_placeholder_shapes(ti)
+    subhead = next(sp for sp in boxes if sp.name == "SubheadArea")
+    assert_region(subhead, ti_regions["subhead"])
+    assert subhead.text_frame.text == ti_page["blocks"][1]["text"]
+    assert run_font(subhead) == (28, "黑体", "黑体")
+    textbox = next(sp for sp in boxes if sp.name == "TextArea")
+    assert_region(textbox, ti_regions["text"])
+    assert textbox.text_frame.text == "\n".join(
+        [ti_page["blocks"][2]["text"], *(f"- {item}" for item in ti_page["blocks"][3]["items"])]
+    )
+    assert run_font(textbox) == (18, "黑体", "黑体")
+    pics = [sp for sp in shapes(ti) if sp.shape_type == 13]  # PICTURE
+    assert len(pics) == 2
+    assert_fitted_in(pics[0], ti_regions["image_slots"][0])
+    assert_fitted_in(pics[1], ti_regions["image_slots"][1])
+    # caption: 10pt Calibri overlay strip at slot 0's internal bottom edge
+    caption = next(sp for sp in boxes if sp.name == "Caption1")
+    slot0 = ti_regions["image_slots"][0]
+    strip_h = Inches(0.25)
+    assert list(region_of(caption)) == pytest.approx(
+        [Inches(slot0["x"]), Inches(slot0["y"]) + Inches(slot0["h"]) - strip_h,
+         Inches(slot0["w"]), strip_h], abs=2)
+    assert caption.text_frame.text == ti_page["blocks"][4]["caption"]
+    assert run_font(caption) == (10, "Calibri", "Calibri")
+    assert len(boxes) == 5  # subhead + text + caption + 2 pictures
+
+    # -- page 6: chart-focus = one big fitted image + side comment
+    cf = prs.slides[5]
+    cf_regions = arch["chart-focus"]["regions"]
+    assert by_ph(cf, "title").text_frame.text == deck["pages"][5]["blocks"][0]["text"]
+    pics = [sp for sp in shapes(cf) if sp.shape_type == 13]
+    assert len(pics) == 1
+    assert_fitted_in(pics[0], cf_regions["chart"])
+    comment = next(sp for sp in non_placeholder_shapes(cf) if sp.name == "CommentArea")
+    assert_region(comment, cf_regions["comment"])
+    assert comment.text_frame.text == deck["pages"][5]["blocks"][2]["text"]
+    assert run_font(comment) == (18, "黑体", "黑体")
+
+    # -- page 7: closing = cover variant
+    closing = prs.slides[6]
+    title = by_ph(closing, "title")
+    assert title.text_frame.text == deck["pages"][6]["blocks"][0]["text"]
+    assert_region(title, arch["closing"]["regions"]["title"])
+    assert run_font(title) == (44, "Times New Roman", "华文中宋")
+    sub = by_ph(closing, "body")
+    assert sub.text_frame.text == deck["pages"][6]["blocks"][1]["text"]
+    assert_region(sub, arch["closing"]["regions"]["subtitle"])
+    assert by_ph(closing, "sldNum") is None
+
+    # -- slide size untouched
+    assert (prs.slide_width, prs.slide_height) == (12192000, 6858000)
+
+    # -- zero template residue anywhere in the deck
+    for slide in prs.slides:
+        text = all_text(slide)
+        for residue in TEMPLATE_RESIDUE:
+            assert residue not in text
+
+    # -- the deck round-trips through a save
+    prs.save(tmp_path / "full.pptx")
+
+
+@requires_math
+def test_full_fixture_template_original_is_never_modified(tmp_path):
+    before = hashlib.sha256(TEMPLATE_PPTX.read_bytes()).hexdigest()
+    _, proc = render(tmp_path, FULL_DECK)
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert hashlib.sha256(TEMPLATE_PPTX.read_bytes()).hexdigest() == before
