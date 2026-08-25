@@ -1,0 +1,138 @@
+{
+  "brand_media": [
+    {
+      "part": "ppt/media/image1.png",
+      "file": "media/image1.png",
+      "content_type": "image/png",
+      "bytes": 78969,
+      "pixel_dims": [
+        1195,
+        1193
+      ],
+      "sha256_16": "565f0051820c02b8",
+      "referenced_by": [
+        "master1"
+      ]
+    },
+    {
+      "part": "ppt/media/image2.gif",
+      "file": "media/image2.gif",
+      "content_type": "image/gif",
+      "bytes": 340611,
+      "pixel_dims": [
+        2085,
+        1993
+      ],
+      "sha256_16": "512a7b5ae3530696",
+      "referenced_by": [
+        "master1"
+      ]
+    },
+    {
+      "part": "ppt/media/image3.png",
+      "file": "media/image3.png",
+      "content_type": "image/png",
+      "bytes": 25282,
+      "pixel_dims": [
+        154,
+        155
+      ],
+      "sha256_16": "37a9b969f0bc12a8",
+      "referenced_by": [
+        "master1"
+      ]
+    },
+    {
+      "part": "ppt/media/image4.png",
+      "file": "media/image4.png",
+      "content_type": "image/png",
+      "bytes": 21431,
+      "pixel_dims": [
+        1050,
+        442
+      ],
+      "sha256_16": "887df1ffff3143e3",
+      "referenced_by": [
+        "master1"
+      ]
+    },
+    {
+      "part": "ppt/media/image5.png",
+      "file": "media/image5.png",
+      "content_type": "image/png",
+      "bytes": 263,
+      "pixel_dims": [
+        33,
+        31
+      ],
+      "sha256_16": "42b3a7c9d29d7518",
+      "referenced_by": [
+        "master1",
+        "master3"
+      ]
+    },
+    {
+      "part": "ppt/media/image6.png",
+      "file": "media/image6.png",
+      "content_type": "image/png",
+      "bytes": 263,
+      "pixel_dims": [
+        30,
+        31
+      ],
+      "sha256_16": "6476d55623e0c6cf",
+      "referenced_by": [
+        "master1",
+        "master3"
+      ]
+    },
+    {
+      "part": "ppt/media/image7.png",
+      "file": "media/image7.png",
+      "content_type": "image/png",
+      "bytes": 15595,
+      "pixel_dims": [
+        682,
+        677
+      ],
+      "sha256_16": "190f803ac6fa5263",
+      "referenced_by": [
+        "master2",
+        "master3"
+      ]
+    },
+    {
+      "part": "ppt/media/media1.svg",
+      "file": "media/media1.svg",
+      "content_type": "image/svg+xml",
+      "bytes": 82078,
+      "pixel_dims": null,
+      "sha256_16": "78c6c7f7f9e08604",
+      "referenced_by": [
+        "master1"
+      ]
+    }
+  ],
+  "excluded_content_media": [
+    "image10.png",
+    "image11.png",
+    "image12.png",
+    "image13.png",
+    "image14.png",
+    "image15.png",
+    "image16.png",
+    "image17.png",
+    "image18.png",
+    "image19.png",
+    "image20.png",
+    "image21.png",
+    "image22.png",
+    "image23.png",
+    "image24.png",
+    "image25.png",
+    "image26.png",
+    "image8.png",
+    "image9.png"
+  ],
+  "note": "excluded_* are figures of the sample presentation (slide content), not template branding"
+}

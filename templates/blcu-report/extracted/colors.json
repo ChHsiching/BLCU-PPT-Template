@@ -1,0 +1,132 @@
+{
+  "themes": {
+    "ppt/theme/theme1.xml": {
+      "name": "Office 主题",
+      "palette": {
+        "dk1": "000000",
+        "lt1": "FFFFFF",
+        "dk2": "44546A",
+        "lt2": "E7E6E6",
+        "accent1": "4472C4",
+        "accent2": "ED7D31",
+        "accent3": "A5A5A5",
+        "accent4": "FFC000",
+        "accent5": "5B9BD5",
+        "accent6": "70AD47",
+        "hlink": "0563C1",
+        "folHlink": "954F72"
+      },
+      "fontScheme": {
+        "major_latin": "Calibri Light",
+        "major_ea": "Arial",
+        "minor_latin": "Calibri",
+        "minor_ea": "Arial"
+      }
+    },
+    "ppt/theme/theme2.xml": {
+      "name": "Office 主题",
+      "palette": {
+        "dk1": "000000",
+        "lt1": "FFFFFF",
+        "dk2": "44546A",
+        "lt2": "E7E6E6",
+        "accent1": "4472C4",
+        "accent2": "ED7D31",
+        "accent3": "A5A5A5",
+        "accent4": "FFC000",
+        "accent5": "5B9BD5",
+        "accent6": "70AD47",
+        "hlink": "0563C1",
+        "folHlink": "954F72"
+      },
+      "fontScheme": {
+        "major_latin": "Calibri Light",
+        "major_ea": "Arial",
+        "minor_latin": "Calibri",
+        "minor_ea": "Arial"
+      }
+    },
+    "ppt/theme/theme3.xml": {
+      "name": "Office 主题",
+      "palette": {
+        "dk1": "000000",
+        "lt1": "FFFFFF",
+        "dk2": "44546A",
+        "lt2": "E7E6E6",
+        "accent1": "4472C4",
+        "accent2": "ED7D31",
+        "accent3": "A5A5A5",
+        "accent4": "FFC000",
+        "accent5": "5B9BD5",
+        "accent6": "70AD47",
+        "hlink": "0563C1",
+        "folHlink": "954F72"
+      },
+      "fontScheme": {
+        "major_latin": "Calibri Light",
+        "major_ea": "Arial",
+        "minor_latin": "Calibri",
+        "minor_ea": "Arial"
+      }
+    },
+    "ppt/theme/theme4.xml": {
+      "name": "Office Theme",
+      "palette": {
+        "dk1": "000000",
+        "lt1": "FFFFFF",
+        "dk2": "000000",
+        "lt2": "FFFFFF",
+        "accent1": "18A303",
+        "accent2": "0369A3",
+        "accent3": "A33E03",
+        "accent4": "8E03A3",
+        "accent5": "C99C00",
+        "accent6": "C9211E",
+        "hlink": "0000EE",
+        "folHlink": "551A8B"
+      },
+      "fontScheme": {
+        "major_latin": "Arial",
+        "major_ea": "DejaVu Sans",
+        "minor_latin": "Arial",
+        "minor_ea": "DejaVu Sans"
+      }
+    }
+  },
+  "master_theme_map": {
+    "master1": "ppt/theme/theme1.xml",
+    "master2": "ppt/theme/theme2.xml",
+    "master3": "ppt/theme/theme3.xml"
+  },
+  "observed_text_colors": {
+    "#000000": {
+      "count": 413,
+      "where": [
+        "master2",
+        "master3",
+        "slide10",
+        "slide11",
+        "slide12",
+        "slide13",
+        "slide14",
+        "slide15",
+        "slide16",
+        "slide17",
+        "slide18",
+        "slide19",
+        "slide2",
+        "slide20",
+        "slide21",
+        "slide3",
+        "slide4",
+        "slide5",
+        "slide6",
+        "slide7",
+        "slide8",
+        "slide9"
+      ]
+    }
+  },
+  "observed_fill_colors": {},
+  "note": "theme palettes are the Office default and theme ea fonts are Arial placeholders; design identity comes from master images and per-run CJK faces (see fonts.json)"
+}

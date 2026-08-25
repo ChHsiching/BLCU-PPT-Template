@@ -1,0 +1,1998 @@
+{
+  "slide_size": {
+    "emu": [
+      12192000,
+      6858000
+    ],
+    "inches": [
+      13.33,
+      7.5
+    ]
+  },
+  "slide_count": 21,
+  "masters": [
+    {
+      "master": "master1",
+      "theme": "ppt/theme/theme1.xml",
+      "layouts": [
+        {
+          "name": "三logo标题页",
+          "placeholders": []
+        }
+      ],
+      "txStyles": {
+        "titleStyle": {
+          "sz_pt": 44.0,
+          "ea": "+mj-ea"
+        },
+        "bodyStyle": {
+          "sz_pt": 28.0,
+          "ea": "+mn-ea"
+        },
+        "otherStyle": {
+          "sz_pt": 18.0,
+          "ea": "+mn-ea"
+        }
+      }
+    },
+    {
+      "master": "master2",
+      "theme": "ppt/theme/theme2.xml",
+      "layouts": [
+        {
+          "name": "标题和内容",
+          "placeholders": [
+            {
+              "type": 1,
+              "idx": 0,
+              "geo": {
+                "x": 0.74,
+                "y": 0.0,
+                "w": 11.86,
+                "h": 1.11
+              }
+            },
+            {
+              "type": 7,
+              "idx": 0,
+              "geo": {
+                "x": 0.74,
+                "y": 1.21,
+                "w": 11.86,
+                "h": 5.48
+              }
+            },
+            {
+              "type": 15,
+              "idx": 1,
+              "geo": null
+            },
+            {
+              "type": 13,
+              "idx": 2,
+              "geo": null
+            }
+          ]
+        }
+      ],
+      "txStyles": {
+        "titleStyle": {
+          "sz_pt": 44.0,
+          "ea": "+mj-ea"
+        },
+        "bodyStyle": {
+          "sz_pt": 28.0,
+          "ea": "+mn-ea"
+        },
+        "otherStyle": {
+          "sz_pt": 18.0,
+          "ea": "+mn-ea"
+        }
+      }
+    },
+    {
+      "master": "master3",
+      "theme": "ppt/theme/theme3.xml",
+      "layouts": [
+        {
+          "name": "1_三logo标题页",
+          "placeholders": [
+            {
+              "type": 15,
+              "idx": 3,
+              "geo": null
+            },
+            {
+              "type": 13,
+              "idx": 4,
+              "geo": null
+            }
+          ]
+        }
+      ],
+      "txStyles": {
+        "titleStyle": {
+          "sz_pt": 44.0,
+          "ea": "+mj-ea"
+        },
+        "bodyStyle": {
+          "sz_pt": 28.0,
+          "ea": "+mn-ea"
+        },
+        "otherStyle": {
+          "sz_pt": 18.0,
+          "ea": "+mn-ea"
+        }
+      }
+    }
+  ],
+  "archetype_samples": {
+    "cover": {
+      "slide": 1,
+      "layout": "三logo标题页",
+      "oMath": 0,
+      "shapes": [
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 1",
+          "geo": {
+            "x": -0.0,
+            "y": 2.67,
+            "w": 13.33,
+            "h": 1.93
+          },
+          "placeholder": {
+            "type": "title",
+            "idx": null
+          },
+          "runs": [
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 10,
+              "color": null,
+              "text": "阿里天池亚军方案复现"
+            }
+          ],
+          "text": "阿里天池亚军方案复现"
+        },
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 2",
+          "geo": {
+            "x": 4.36,
+            "y": 5.87,
+            "w": 4.61,
+            "h": 0.62
+          },
+          "placeholder": {
+            "type": "body",
+            "idx": null
+          },
+          "runs": [
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 24.0,
+              "chars": 3,
+              "color": null,
+              "text": "汇报人"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 24.0,
+              "chars": 1,
+              "color": null,
+              "text": ":"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 24.0,
+              "chars": 3,
+              "color": null,
+              "text": "赵法科"
+            }
+          ],
+          "text": "汇报人:赵法科"
+        }
+      ]
+    },
+    "agenda": {
+      "slide": 2,
+      "layout": "标题和内容",
+      "oMath": 0,
+      "shapes": [
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 1",
+          "geo": {
+            "x": 11.96,
+            "y": 6.82,
+            "w": 0.63,
+            "h": 0.68
+          },
+          "placeholder": {
+            "type": "sldNum",
+            "idx": "8"
+          },
+          "text": "2"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 33",
+          "geo": {
+            "x": 0.75,
+            "y": 1.6,
+            "w": 11.25,
+            "h": 8.4
+          },
+          "runs": [
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 9,
+              "color": "000000",
+              "text": "一 预处理：预处理"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 1,
+              "color": "000000",
+              "text": "("
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "简化"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 1,
+              "color": "000000",
+              "text": "+"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "外扩"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 1,
+              "color": "000000",
+              "text": "+"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "旋转枚举"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 7,
+              "color": "000000",
+              "text": ") + NFP"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "预计算 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "二 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 8,
+              "color": "000000",
+              "text": "Phase 1 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "序列"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 1,
+              "color": "000000",
+              "text": "×"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 7,
+              "color": "000000",
+              "text": "参数并行评估 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "+ "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "快速压缩 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "+ NFP"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "预热"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "三 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 14,
+              "color": "000000",
+              "text": "Phase2  Stage1"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "参数寻优 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "+ GA"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "混合搜索"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "四 后处理"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 2,
+              "color": "000000",
+              "text": ": "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "最终压缩 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 13,
+              "color": "000000",
+              "text": "+ TailTuck → "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "约束校验"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 1,
+              "color": "000000",
+              "text": "("
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "原始多边形"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 24.0,
+              "chars": 1,
+              "color": "000000",
+              "text": ")"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 36.0,
+              "chars": 1,
+              "color": "000000",
+              "text": " "
+            }
+          ],
+          "text": "一 预处理：预处理(简化+外扩+旋转枚举) + NFP预计算 二 Phase 1"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 34",
+          "geo": {
+            "x": 5.0,
+            "y": -0.03,
+            "w": 3.5,
+            "h": 2.03
+          },
+          "runs": [
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 48.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "算法思想"
+            }
+          ],
+          "text": "算法思想"
+        }
+      ]
+    },
+    "text-formula": {
+      "slide": 3,
+      "layout": "标题和内容",
+      "oMath": 4,
+      "shapes": [
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 1",
+          "geo": {
+            "x": 0.74,
+            "y": 0.0,
+            "w": 11.86,
+            "h": 1.11
+          },
+          "placeholder": {
+            "type": "title",
+            "idx": null
+          },
+          "runs": [
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 6,
+              "color": null,
+              "text": "预处理（简化"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 1,
+              "color": null,
+              "text": "+"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 2,
+              "color": null,
+              "text": "外扩"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 1,
+              "color": null,
+              "text": "+"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 5,
+              "color": null,
+              "text": "旋转枚举）"
+            }
+          ],
+          "text": "预处理（简化+外扩+旋转枚举）"
+        },
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 2",
+          "geo": {
+            "x": 11.96,
+            "y": 6.82,
+            "w": 0.63,
+            "h": 0.68
+          },
+          "placeholder": {
+            "type": "sldNum",
+            "idx": "10"
+          },
+          "text": "3"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 2",
+          "geo": {
+            "x": 2.37,
+            "y": 1.5,
+            "w": 10.38,
+            "h": 3.47
+          }
+        },
+        {
+          "kind": "shape",
+          "name": "文本框 1",
+          "geo": {
+            "x": 0.08,
+            "y": 1.4,
+            "w": 12.84,
+            "h": 1.27
+          }
+        },
+        {
+          "kind": "shape",
+          "name": "文本框 3",
+          "geo": {
+            "x": 1.11,
+            "y": 4.32,
+            "w": 10.96,
+            "h": 1.78
+          },
+          "runs": [
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 10,
+              "color": "000000",
+              "text": "简化：严格外包简化 "
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 13,
+              "color": "000000",
+              "text": "只做扩张性操作，保证结果 "
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "S("
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 7,
+              "color": "000000",
+              "text": "处理后的多边形"
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 3,
+              "color": "000000",
+              "text": ")⊇P"
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 7,
+              "color": "000000",
+              "text": "（原多边形）："
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 34,
+              "color": "000000",
+              "text": "凹顶点删除：删除凹顶点 ，区域向外填补，"
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 32,
+              "color": "000000",
+              "text": "凸顶点对合并：相邻两凸顶点用邻边延长线交"
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "= "
+            },
+            {
+              "ea": "楷体",
+              "latin": "楷体",
+              "sz_pt": 20.0,
+              "chars": 7,
+              "color": "000000",
+              "text": "新增三角形面积"
+            }
+          ],
+          "text": "简化：严格外包简化 只做扩张性操作，保证结果 S(处理后的多边形)⊇P（原多边形"
+        }
+      ]
+    },
+    "text-image": {
+      "slide": 7,
+      "layout": "标题和内容",
+      "oMath": 0,
+      "shapes": [
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 1",
+          "geo": {
+            "x": 0.74,
+            "y": 0.0,
+            "w": 11.86,
+            "h": 1.11
+          },
+          "placeholder": {
+            "type": "title",
+            "idx": null
+          },
+          "runs": [
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 4,
+              "color": null,
+              "text": "预处理（"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 11,
+              "color": null,
+              "text": "NFP+IFP+NFP"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 4,
+              "color": null,
+              "text": "预计算）"
+            }
+          ],
+          "text": "预处理（NFP+IFP+NFP预计算）"
+        },
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 2",
+          "geo": {
+            "x": 11.96,
+            "y": 6.82,
+            "w": 0.63,
+            "h": 0.68
+          },
+          "placeholder": {
+            "type": "sldNum",
+            "idx": "13"
+          },
+          "text": "7"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 49",
+          "geo": {
+            "x": 0.75,
+            "y": 1.5,
+            "w": 12.0,
+            "h": 4.75
+          },
+          "runs": [
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 28.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "NFP:"
+            }
+          ],
+          "text": "NFP:"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 51",
+          "geo": {
+            "x": 0.5,
+            "y": 4.2,
+            "w": 8.16,
+            "h": 1.54
+          },
+          "runs": [
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 8,
+              "color": "000000",
+              "text": "  - A = "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "待放件，"
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "B = "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 3,
+              "color": "000000",
+              "text": "已放件"
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "  - "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "对 "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "A "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 10,
+              "color": "000000",
+              "text": "的每个顶点取反得 −"
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 1,
+              "color": "000000",
+              "text": "A"
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "  - "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "求 "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "B "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 3,
+              "color": "000000",
+              "text": "与 −"
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "A "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "的 "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 10,
+              "color": "000000",
+              "text": "Minkowski "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 18,
+              "color": "000000",
+              "text": "和（两多边形顶点两两相加构成的区域）"
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "  - "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 7,
+              "color": "000000",
+              "text": "合并自交即得 "
+            },
+            {
+              "ea": null,
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 3,
+              "color": "000000",
+              "text": "NFP"
+            }
+          ],
+          "text": "  - A = 待放件，B = 已放件  - 对 A 的每个顶点取反得 −A  "
+        },
+        {
+          "kind": "picture",
+          "name": "Picture 50",
+          "geo": {
+            "x": 0.74,
+            "y": 2.29,
+            "w": 5.65,
+            "h": 1.58
+          },
+          "text": "",
+          "rEmbed": "rId3"
+        },
+        {
+          "kind": "picture",
+          "name": "Picture 52",
+          "geo": {
+            "x": 6.75,
+            "y": 1.51,
+            "w": 3.14,
+            "h": 2.28
+          },
+          "text": "",
+          "rEmbed": "rId4"
+        },
+        {
+          "kind": "picture",
+          "name": "Picture 53",
+          "geo": {
+            "x": 10.0,
+            "y": 1.65,
+            "w": 2.25,
+            "h": 2.1
+          },
+          "text": "",
+          "rEmbed": "rId5"
+        },
+        {
+          "kind": "picture",
+          "name": "Picture 54",
+          "geo": {
+            "x": 8.78,
+            "y": 4.2,
+            "w": 2.88,
+            "h": 2.73
+          },
+          "text": "",
+          "rEmbed": "rId6"
+        }
+      ]
+    },
+    "text-image_alt": {
+      "slide": 9,
+      "layout": "标题和内容",
+      "oMath": 0,
+      "shapes": [
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 1",
+          "geo": {
+            "x": 0.74,
+            "y": 0.0,
+            "w": 11.86,
+            "h": 1.11
+          },
+          "placeholder": {
+            "type": "title",
+            "idx": null
+          },
+          "runs": [
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 4,
+              "color": null,
+              "text": "预处理（"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 11,
+              "color": null,
+              "text": "NFP+IFP+NFP"
+            },
+            {
+              "ea": "华文中宋",
+              "latin": "Times New Roman",
+              "sz_pt": 44.0,
+              "chars": 4,
+              "color": null,
+              "text": "预计算）"
+            }
+          ],
+          "text": "预处理（NFP+IFP+NFP预计算）"
+        },
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 2",
+          "geo": {
+            "x": 11.96,
+            "y": 6.82,
+            "w": 0.63,
+            "h": 0.68
+          },
+          "placeholder": {
+            "type": "sldNum",
+            "idx": "15"
+          },
+          "text": "9"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 63",
+          "geo": {
+            "x": 0.75,
+            "y": 1.5,
+            "w": 12.0,
+            "h": 4.75
+          },
+          "runs": [
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 36.0,
+              "chars": 3,
+              "color": "000000",
+              "text": "IFP"
+            }
+          ],
+          "text": "IFP"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 65",
+          "geo": {
+            "x": 0.43,
+            "y": 3.31,
+            "w": 4.44,
+            "h": 2.04
+          },
+          "runs": [
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 5,
+              "color": "000000",
+              "text": " IFP "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 7,
+              "color": "000000",
+              "text": "的边界约束算 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "IFP "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 13,
+              "color": "000000",
+              "text": "前先把材料边界向内缩一个 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 6,
+              "color": "000000",
+              "text": "border"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 24,
+              "color": "000000",
+              "text": "（带少量安全裕量防精度误差），再用收缩后"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 3,
+              "color": "000000",
+              "text": "IFP"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 18,
+              "color": "000000",
+              "text": "，从而保证待放件与板边最小间距 ≥ "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 6,
+              "color": "000000",
+              "text": "border"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 1,
+              "color": "000000",
+              "text": "。"
+            }
+          ],
+          "text": " IFP 的边界约束算 IFP 前先把材料边界向内缩一个 border（带少量安"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 66",
+          "geo": {
+            "x": 0.43,
+            "y": 5.17,
+            "w": 11.88,
+            "h": 1.46
+          },
+          "runs": [
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 7,
+              "color": "000000",
+              "text": "候选点选择策略"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "可行域（"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 10,
+              "color": "000000",
+              "text": "IFP − ∪NFP"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 12,
+              "color": "000000",
+              "text": "）算出后，取其顶点（贴 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "NFP "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 20,
+              "color": "000000",
+              "text": "边界、与已放件紧贴的位置）作为候选，按 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 1,
+              "color": "000000",
+              "text": "x"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 18.0,
+              "chars": 46,
+              "color": "000000",
+              "text": "坐标升序排列，逐个用评估函数打分，选得分"
+            }
+          ],
+          "text": "候选点选择策略可行域（IFP − ∪NFP）算出后，取其顶点（贴 NFP 边界、"
+        },
+        {
+          "kind": "picture",
+          "name": "Picture 64",
+          "geo": {
+            "x": 0.58,
+            "y": 2.44,
+            "w": 5.69,
+            "h": 0.83
+          },
+          "text": "",
+          "rEmbed": "rId3"
+        },
+        {
+          "kind": "picture",
+          "name": "Picture 67",
+          "geo": {
+            "x": 7.67,
+            "y": 1.25,
+            "w": 5.66,
+            "h": 3.84
+          },
+          "text": "",
+          "rEmbed": "rId4"
+        }
+      ]
+    },
+    "chart-focus": {
+      "slide": 18,
+      "layout": "标题和内容",
+      "oMath": 0,
+      "shapes": [
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 1",
+          "geo": {
+            "x": 0.74,
+            "y": 0.0,
+            "w": 11.86,
+            "h": 1.11
+          },
+          "placeholder": {
+            "type": "title",
+            "idx": null
+          },
+          "runs": [
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 24.0,
+              "chars": 4,
+              "color": null,
+              "text": "实验结果"
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 24.0,
+              "chars": 1,
+              "color": null,
+              "text": "+"
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 24.0,
+              "chars": 4,
+              "color": null,
+              "text": "问题分析"
+            }
+          ],
+          "text": "实验结果+问题分析"
+        },
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 2",
+          "geo": {
+            "x": 11.96,
+            "y": 6.82,
+            "w": 0.63,
+            "h": 0.68
+          },
+          "placeholder": {
+            "type": "sldNum",
+            "idx": "23"
+          },
+          "text": "18"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 112",
+          "geo": {
+            "x": 0.74,
+            "y": 1.11,
+            "w": 12.0,
+            "h": 4.75
+          },
+          "runs": [
+            {
+              "ea": "Noto Sans CJK SC",
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 1,
+              "color": "000000",
+              "text": " "
+            },
+            {
+              "ea": "Noto Sans CJK SC",
+              "latin": "Arial",
+              "sz_pt": 18.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "实验结果"
+            }
+          ],
+          "text": " 实验结果"
+        },
+        {
+          "kind": "shape",
+          "name": "",
+          "geo": {
+            "x": 11.18,
+            "y": 2.59,
+            "w": 3.28,
+            "h": 2.22
+          },
+          "runs": [
+            {
+              "ea": null,
+              "latin": null,
+              "sz_pt": null,
+              "chars": 11,
+              "color": null,
+              "text": "实验结果表明现有方案和"
+            },
+            {
+              "ea": null,
+              "latin": null,
+              "sz_pt": null,
+              "chars": 16,
+              "color": null,
+              "text": "autonest对比仍有很大不足"
+            },
+            {
+              "ea": null,
+              "latin": null,
+              "sz_pt": null,
+              "chars": 65,
+              "color": null,
+              "text": "在和packingUI的对比中也有大量不"
+            },
+            {
+              "ea": null,
+              "latin": null,
+              "sz_pt": null,
+              "chars": 2,
+              "color": null,
+              "text": "在和"
+            },
+            {
+              "ea": null,
+              "latin": null,
+              "sz_pt": null,
+              "chars": 8,
+              "color": null,
+              "text": "zj的对比中占优"
+            }
+          ],
+          "text": "实验结果表明现有方案和autonest对比仍有很大不足在和packingUI的对"
+        },
+        {
+          "kind": "picture",
+          "name": "",
+          "geo": {
+            "x": 0.95,
+            "y": 1.6,
+            "w": 10.02,
+            "h": 5.32
+          },
+          "text": "",
+          "rEmbed": "rId3"
+        }
+      ]
+    },
+    "text-full_variant": {
+      "slide": 11,
+      "layout": "标题和内容",
+      "oMath": 0,
+      "shapes": [
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 1",
+          "geo": {
+            "x": 0.74,
+            "y": 0.0,
+            "w": 11.86,
+            "h": 1.11
+          },
+          "placeholder": {
+            "type": "title",
+            "idx": null
+          },
+          "runs": [
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 28.0,
+              "chars": 8,
+              "color": null,
+              "text": "Phase 1 "
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 28.0,
+              "chars": 2,
+              "color": null,
+              "text": "序列"
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 28.0,
+              "chars": 1,
+              "color": null,
+              "text": "×"
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 28.0,
+              "chars": 6,
+              "color": null,
+              "text": "参数并行评估"
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 28.0,
+              "chars": 1,
+              "color": null,
+              "text": "+"
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 28.0,
+              "chars": 4,
+              "color": null,
+              "text": "快速压缩"
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 28.0,
+              "chars": 4,
+              "color": null,
+              "text": "+NFP"
+            },
+            {
+              "ea": "Courier New",
+              "latin": "Courier New",
+              "sz_pt": 28.0,
+              "chars": 2,
+              "color": null,
+              "text": "预热"
+            }
+          ],
+          "text": "Phase 1 序列×参数并行评估+快速压缩+NFP预热"
+        },
+        {
+          "kind": "shape",
+          "name": "PlaceHolder 2",
+          "geo": {
+            "x": 11.96,
+            "y": 6.82,
+            "w": 0.63,
+            "h": 0.68
+          },
+          "placeholder": {
+            "type": "sldNum",
+            "idx": "16"
+          },
+          "text": "11"
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 70",
+          "geo": {
+            "x": 0.75,
+            "y": 1.5,
+            "w": 12.0,
+            "h": 4.75
+          }
+        },
+        {
+          "kind": "shape",
+          "name": "Rectangle 71",
+          "geo": {
+            "x": 0.35,
+            "y": 1.11,
+            "w": 11.86,
+            "h": 5.58
+          },
+          "runs": [
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 7,
+              "color": "000000",
+              "text": "Phase1 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "序列生成"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "     "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "  "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 13,
+              "color": "000000",
+              "text": "排样顺序对利用率影响很大，"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 6,
+              "color": "000000",
+              "text": "Phase1"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "  "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 39,
+              "color": "000000",
+              "text": "用多条不同贪心准则各排一条候选序列，逐条"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "GA"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "。共"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "  5 "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "条准则："
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "  1. "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "综合优先"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "--"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 14,
+              "color": "000000",
+              "text": "面积、周长、复杂度加权评分。"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "  2. "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "组合面积"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "--"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 13,
+              "color": "000000",
+              "text": "面积为主、形状紧凑度作微调"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "  3. "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "纯面积降序"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "--"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 8,
+              "color": "000000",
+              "text": "最经典的大件先放"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "  4. "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 4,
+              "color": "000000",
+              "text": "宽度降序"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "--"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 19,
+              "color": "000000",
+              "text": "按包围盒长度方向跨度排，提供序列多样性"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "  5. "
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 6,
+              "color": "000000",
+              "text": "不规则度降序"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 2,
+              "color": "000000",
+              "text": "--"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 13,
+              "color": "000000",
+              "text": "越不规则越先放，提供多样性"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 35,
+              "color": "000000",
+              "text": "根据数据集大小选出不同数量的序列和已有的"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 5,
+              "color": "000000",
+              "text": "l0002"
+            },
+            {
+              "ea": "黑体",
+              "latin": "黑体",
+              "sz_pt": 20.0,
+              "chars": 43,
+              "color": "000000",
+              "text": "数据集为例，代码会选出三条序列和三组不同"
+            }
+          ],
+          "text": "Phase1 序列生成       排样顺序对利用率影响很大，Phase1  用"
+        }
+      ]
+    }
+  },
+  "canvas_overflows": [
+    {
+      "slide": 2,
+      "name": "Rectangle 33",
+      "geo": {
+        "x": 0.75,
+        "y": 1.6,
+        "w": 11.25,
+        "h": 8.4
+      }
+    },
+    {
+      "slide": 2,
+      "name": "Rectangle 34",
+      "geo": {
+        "x": 5.0,
+        "y": -0.03,
+        "w": 3.5,
+        "h": 2.03
+      }
+    },
+    {
+      "slide": 6,
+      "name": "Rectangle 46",
+      "geo": {
+        "x": 1.0,
+        "y": 1.72,
+        "w": 12.0,
+        "h": 7.53
+      }
+    },
+    {
+      "slide": 10,
+      "name": "Picture 72",
+      "geo": {
+        "x": 7.54,
+        "y": 2.14,
+        "w": 6.44,
+        "h": 4.81
+      }
+    },
+    {
+      "slide": 12,
+      "name": "文本框 1",
+      "geo": {
+        "x": -0.38,
+        "y": 5.48,
+        "w": 6.47,
+        "h": 0.93
+      }
+    },
+    {
+      "slide": 13,
+      "name": "文本框 1",
+      "geo": {
+        "x": -0.38,
+        "y": 5.48,
+        "w": 6.47,
+        "h": 0.93
+      }
+    },
+    {
+      "slide": 13,
+      "name": "",
+      "geo": {
+        "x": 10.18,
+        "y": 4.93,
+        "w": 6.58,
+        "h": 0.27
+      }
+    },
+    {
+      "slide": 13,
+      "name": "",
+      "geo": {
+        "x": 10.26,
+        "y": 6.34,
+        "w": 6.41,
+        "h": 0.27
+      }
+    },
+    {
+      "slide": 16,
+      "name": "文本框 10",
+      "geo": {
+        "x": 7.89,
+        "y": 3.12,
+        "w": 5.71,
+        "h": 0.71
+      }
+    },
+    {
+      "slide": 16,
+      "name": "文本框 13",
+      "geo": {
+        "x": 8.38,
+        "y": 5.44,
+        "w": 5.06,
+        "h": 0.33
+      }
+    },
+    {
+      "slide": 18,
+      "name": "",
+      "geo": {
+        "x": 11.18,
+        "y": 2.59,
+        "w": 3.28,
+        "h": 2.22
+      }
+    },
+    {
+      "slide": 19,
+      "name": "Rectangle 115",
+      "geo": {
+        "x": 0.46,
+        "y": 1.11,
+        "w": 12.48,
+        "h": 8.19
+      }
+    },
+    {
+      "slide": 20,
+      "name": "Rectangle 1",
+      "geo": {
+        "x": 0.46,
+        "y": 1.11,
+        "w": 12.48,
+        "h": 8.19
+      }
+    },
+    {
+      "slide": 21,
+      "name": "Rectangle 115",
+      "geo": {
+        "x": 0.43,
+        "y": 1.88,
+        "w": 12.48,
+        "h": 9.23
+      }
+    }
+  ],
+  "notes_slides_empty": 21,
+  "notes_slides_total": 21
+}

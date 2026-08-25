@@ -1,0 +1,291 @@
+{
+  "runs_by_face_size": {
+    "黑体@20pt": {
+      "runs": 235,
+      "chars": 1767,
+      "slides": [
+        "s10",
+        "s11",
+        "s12",
+        "s13",
+        "s14",
+        "s15",
+        "s17",
+        "s19",
+        "s20",
+        "s21",
+        "s6"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "旋转枚举在预处理阶段为每个裁片生"
+    },
+    "Arial@18pt": {
+      "runs": 51,
+      "chars": 326,
+      "slides": [
+        "s7",
+        "s8"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "  - A = "
+    },
+    "Courier New@28pt": {
+      "runs": 40,
+      "chars": 140,
+      "slides": [
+        "s10",
+        "s11",
+        "s12",
+        "s13",
+        "s14"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "Phase 1 "
+    },
+    "黑体@24pt": {
+      "runs": 38,
+      "chars": 163,
+      "slides": [
+        "s16",
+        "s17",
+        "s2"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "一 预处理：预处理"
+    },
+    "华文中宋@44pt": {
+      "runs": 30,
+      "chars": 127,
+      "slides": [
+        "s1",
+        "s3",
+        "s4",
+        "s5",
+        "s6",
+        "s7",
+        "s8",
+        "s9"
+      ],
+      "roles": [
+        "display"
+      ],
+      "sample": "阿里天池亚军方案复现"
+    },
+    "黑体@18pt": {
+      "runs": 22,
+      "chars": 205,
+      "slides": [
+        "s12",
+        "s13",
+        "s9"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": " IFP "
+    },
+    "华文中宋@15pt": {
+      "runs": 20,
+      "chars": 32,
+      "slides": [
+        "s10",
+        "s11",
+        "s12",
+        "s13",
+        "s14",
+        "s15",
+        "s16",
+        "s17",
+        "s18",
+        "s19",
+        "s2",
+        "s20",
+        "s21",
+        "s3",
+        "s4",
+        "s5",
+        "s6",
+        "s7",
+        "s8",
+        "s9"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "2"
+    },
+    "楷体@20pt": {
+      "runs": 20,
+      "chars": 234,
+      "slides": [
+        "s3",
+        "s4"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "简化：严格外包简化 "
+    },
+    "Courier New@24pt": {
+      "runs": 20,
+      "chars": 90,
+      "slides": [
+        "s15",
+        "s16",
+        "s18",
+        "s19",
+        "s20",
+        "s21"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "Phase2  Stage1"
+    },
+    "Calibri@10pt": {
+      "runs": 19,
+      "chars": 212,
+      "slides": [
+        "s12",
+        "s13"
+      ],
+      "roles": [
+        "caption"
+      ],
+      "sample": "贴合项权重："
+    },
+    "楷体@24pt": {
+      "runs": 10,
+      "chars": 81,
+      "slides": [
+        "s5"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "外扩（最小间距 → 多边形膨胀）"
+    },
+    "Arial@20pt": {
+      "runs": 10,
+      "chars": 41,
+      "slides": [
+        "s16",
+        "s17"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "改进前："
+    },
+    "Cambria Math@22pt": {
+      "runs": 7,
+      "chars": 0,
+      "slides": [
+        "s15"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": ""
+    },
+    "undefined@14pt": {
+      "runs": 4,
+      "chars": 58,
+      "slides": [
+        "s16"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "第二个公式表示的是空隙占现排料长"
+    },
+    "华文中宋@24pt": {
+      "runs": 3,
+      "chars": 7,
+      "slides": [
+        "s1"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "汇报人"
+    },
+    "黑体@36pt": {
+      "runs": 2,
+      "chars": 4,
+      "slides": [
+        "s2",
+        "s9"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": " "
+    },
+    "黑体@28pt": {
+      "runs": 2,
+      "chars": 8,
+      "slides": [
+        "s7",
+        "s8"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": "NFP:"
+    },
+    "Noto Sans CJK SC@18pt": {
+      "runs": 2,
+      "chars": 5,
+      "slides": [
+        "s18"
+      ],
+      "roles": [
+        "body"
+      ],
+      "sample": " "
+    },
+    "Arial@48pt": {
+      "runs": 1,
+      "chars": 4,
+      "slides": [
+        "s2"
+      ],
+      "roles": [
+        "display"
+      ],
+      "sample": "算法思想"
+    },
+    "Noto Sans CJK SC@10pt": {
+      "runs": 1,
+      "chars": 1,
+      "slides": [
+        "s17"
+      ],
+      "roles": [
+        "caption"
+      ],
+      "sample": "。"
+    },
+    "黑体@10pt": {
+      "runs": 1,
+      "chars": 1,
+      "slides": [
+        "s17"
+      ],
+      "roles": [
+        "caption"
+      ],
+      "sample": "。"
+    }
+  },
+  "note": "face is ea (CJK) typeface when set, else latin, else theme font"
+}
