@@ -21,5 +21,6 @@ Single-context: `CONTEXT.md` + `docs/adr/` at the repo root. See `docs/agents/do
 - Template original: `templates/blcu-report/blcu-report.pptx` (local-only, gitignored — never commit any `.pptx`; `.gitignore` has `templates/*/*.pptx` as the hard backstop).
 - Python 3.11 available; `python-pptx` 1.0.2 installed; pytest 9.x installed — run tests with `python -m pytest tests/`. `scripts/validate_deck.py` is stdlib-only; `scripts/render_pptx.py` additionally uses `latex2mathml` + `matplotlib` (both installed) and `MML2OMML.XSL` (auto-located from the Office install, override with `BLCU_MML2OMML_XSL`; without it formulas fall back to rendered images).
 - PowerPoint is installed: COM automation available for render/screenshot QA; `MML2OMML.XSL` ships with the Office install (LaTeX→MathML→OMML chain).
+- renderer-web: Node 24 + npm available. Preset scaffold at `assets/web-template/` (Vite + React + KaTeX, runs standalone via `npm install && npm run dev`); `scripts/scaffold_web.py <deck.json> -o <dir>` copies it into a presentation project. The npm-build e2e test needs npm on PATH and network for the first install.
 - No LibreOffice on this machine.
-- Shell is Git Bash but native Windows Python can't see Git Bash's `/tmp` — always pass absolute Windows paths when scripting.
+- Shell is Git Bash but native Windows Python can't see Git Bash's `/tmp` — always pass absolute Windows paths when scripting. Some localhost ports sit in Windows reserved ranges (listen fails with EACCES) — if a dev server hits EACCES, pick another port.

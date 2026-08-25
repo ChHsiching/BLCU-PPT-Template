@@ -1,0 +1,97 @@
+{
+  "template": "blcu-report",
+  "meta": {
+    "presenter": "张三",
+    "date": "2026-08-25"
+  },
+  "pages": [
+    {
+      "archetype": "cover",
+      "blocks": [
+        { "type": "title", "text": "基于对比学习的神经机器翻译研究" },
+        { "type": "text", "text": "汇报人:张三 2026-08-25" }
+      ]
+    },
+    {
+      "archetype": "agenda",
+      "blocks": [
+        { "type": "title", "text": "汇报大纲" },
+        {
+          "type": "list",
+          "items": [
+            "一 研究背景：任务与挑战",
+            "二 相关工作：对比学习与机器翻译",
+            "三 方法：对比学习框架与训练流程",
+            "四 实验：主结果与消融分析",
+            "五 总结：贡献与未来工作"
+          ]
+        }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        { "type": "title", "text": "方法：对比学习框架" },
+        {
+          "type": "formula",
+          "latex": "\\mathcal{L}_{\\mathrm{CL}} = -\\log \\frac{\\exp\\left(\\mathrm{sim}(h_i, h_j)/\\tau\\right)}{\\sum_{k \\neq i} \\exp\\left(\\mathrm{sim}(h_i, h_k)/\\tau\\right)}"
+        },
+        {
+          "type": "formula",
+          "latex": "\\mathrm{sim}(u, v) = \\frac{u^{\\top} v}{\\lVert u \\rVert \\, \\lVert v \\rVert}"
+        },
+        { "type": "text", "text": "其中 sim 为余弦相似度，τ 为温度超参数，f 为共享编码器。" }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        { "type": "title", "text": "研究背景与动机" },
+        { "type": "text", "text": "神经机器翻译在低资源场景下性能受限，平行语料稀缺是主要瓶颈。" },
+        { "type": "text", "text": "对比学习通过拉近正例、推远负例，可在无监督条件下学到通用表示。" }
+      ]
+    },
+    {
+      "archetype": "text-image",
+      "blocks": [
+        { "type": "title", "text": "模型结构总览" },
+        { "type": "subhead", "text": "编码器与对比头" },
+        { "type": "text", "text": "编码器输出句向量，对比头在批次内构造正负例并计算对比损失。" },
+        {
+          "type": "list",
+          "items": [
+            "句向量维度 512",
+            "批内负例数 63"
+          ]
+        },
+        {
+          "type": "image",
+          "path": "material/images/framework-diagram.png",
+          "caption": "整体框架：双分支编码与批内对比"
+        },
+        {
+          "type": "image",
+          "path": "material/images/attention-heatmap.png"
+        }
+      ]
+    },
+    {
+      "archetype": "chart-focus",
+      "blocks": [
+        { "type": "title", "text": "主实验结果：BLEU 对比" },
+        {
+          "type": "image",
+          "path": "material/images/main-results-bar.png"
+        },
+        { "type": "text", "text": "本方法在三个数据集上均优于基线，平均提升约 1.2 BLEU。" }
+      ]
+    },
+    {
+      "archetype": "closing",
+      "blocks": [
+        { "type": "title", "text": "谢谢聆听" },
+        { "type": "text", "text": "汇报人:张三" }
+      ]
+    }
+  ]
+}
