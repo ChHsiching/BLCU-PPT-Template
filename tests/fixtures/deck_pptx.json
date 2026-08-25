@@ -1,0 +1,39 @@
+{
+  "template": "blcu-report",
+  "meta": {
+    "presenter": "张三",
+    "date": "2026-08-25"
+  },
+  "pages": [
+    {
+      "archetype": "cover",
+      "blocks": [
+        { "type": "title", "text": "基于对比学习的神经机器翻译研究" },
+        { "type": "text", "text": "汇报人:张三 2026-08-25" }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        { "type": "title", "text": "方法：对比学习框架" },
+        {
+          "type": "formula",
+          "latex": "\\mathcal{L}_{\\mathrm{CL}} = -\\log \\frac{\\exp\\left(\\mathrm{sim}(h_i, h_j)/\\tau\\right)}{\\sum_{k \\neq i} \\exp\\left(\\mathrm{sim}(h_i, h_k)/\\tau\\right)}"
+        },
+        {
+          "type": "formula",
+          "latex": "\\mathrm{sim}(u, v) = \\frac{u^{\\top} v}{\\lVert u \\rVert \\, \\lVert v \\rVert}"
+        },
+        { "type": "text", "text": "其中 sim 为余弦相似度，τ 为温度超参数，f 为共享编码器。" }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        { "type": "title", "text": "研究背景与动机" },
+        { "type": "text", "text": "神经机器翻译在低资源场景下性能受限，平行语料稀缺是主要瓶颈。" },
+        { "type": "text", "text": "对比学习通过拉近正例、推远负例，可在无监督条件下学到通用表示。" }
+      ]
+    }
+  ]
+}
