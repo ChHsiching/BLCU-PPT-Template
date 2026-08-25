@@ -371,10 +371,15 @@ def _check_budgets(records: dict, ppath: str, archetype: str, budget: dict, find
 def _check_images(records: dict, ppath: str, image_root: Path, findings: list) -> None:
     for bpath, block in records["image"]:
         raw = block["path"]
-        p = Path(raw)
-        resolved = p if p.is_absolute() else image_root / p
+        resolved = resolve_image_path(raw, image_root)
         if not resolved.is_file():
             findings.append(Finding(f"{bpath}.path", "image.path_missing", f"image file not found: {raw} (resolved: {resolved})"))
+
+
+def resolve_image_path(raw: str, image_root: Path | None) -> Path:
+    """Resolve a deck image path: absolute as-is, else relative to the deck's dir."""
+    p = Path(raw)
+    return p if p.is_absolute() else (image_root or Path.cwd()) / p
 
 
 # ---------------------------------------------------------------------------

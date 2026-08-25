@@ -327,15 +327,7 @@ def _fill_placeholder(sp_el, text: str, *, size_pt: int, latin: str, ea: str,
 # images (deck-referenced material files) and captions
 # ---------------------------------------------------------------------------
 
-CAPTION_STRIP_IN = 0.25  # overlay strip height inside the owning slot
-
-
-def resolve_image_path(raw: str, image_root: Path | None) -> Path:
-    """Resolve a deck image path the way validate_deck does (deck dir relative)."""
-    p = Path(raw)
-    if p.is_absolute():
-        return p
-    return (image_root or Path.cwd()) / p
+CAPTION_STRIP_HEIGHT_IN = 0.25  # overlay strip height inside the owning slot
 
 
 def _add_fitted_picture(slide, image_path: Path, slot: dict):
@@ -360,9 +352,9 @@ def _add_caption(slide_el, slot: dict, text: str, manifest: dict, index: int) ->
     cap = manifest["typography"]["caption"]
     strip = {
         "x": slot["x"],
-        "y": slot["y"] + slot["h"] - CAPTION_STRIP_IN,
+        "y": slot["y"] + slot["h"] - CAPTION_STRIP_HEIGHT_IN,
         "w": slot["w"],
-        "h": CAPTION_STRIP_IN,
+        "h": CAPTION_STRIP_HEIGHT_IN,
     }
     box = _textbox_shape(slide_el, f"Caption{index}", strip, _next_shape_id(slide_el))
     _fill_textbox(box, [_text_paragraph(text, size_pt=cap["size_pt"],
@@ -439,7 +431,8 @@ def _page_texts(page: dict) -> list[str]:
     return [b["text"] for b in page["blocks"] if b["type"] == "text"]
 
 
-def _fill_title(slide_el, page: dict, arch: dict, manifest: dict, archetype: str) -> None:
+def _fill_title(slide_el, page: dict, arch: dict, manifest: dict, archetype: str,
+                algn: str | None = None) -> None:
     """Fill the title placeholder of a cloned slide at the manifest region."""
     title_text = next(b["text"] for b in page["blocks"] if b["type"] == "title")
     title = find_placeholder(slide_el, "title")
@@ -448,23 +441,16 @@ def _fill_title(slide_el, page: dict, arch: dict, manifest: dict, archetype: str
     _set_position(title, arch["regions"]["title"])
     _fill_placeholder(title, title_text, size_pt=_title_size_pt(title_text, manifest),
                       latin=manifest["typography"]["title"]["latin"],
-                      ea=manifest["typography"]["title"]["face"])
+                      ea=manifest["typography"]["title"]["face"], algn=algn)
 
 
 def fill_cover(slide, page: dict, arch: dict, manifest: dict) -> None:
     el = slide.part._element
-    title_text = next(b["text"] for b in page["blocks"] if b["type"] == "title")
     sub = manifest["typography"]["cover_subtitle"]
     text = " ".join(_page_texts(page))
 
     _strip_content_shapes(el)
-    title = find_placeholder(el, "title")
-    if title is None:
-        raise RenderError("cover clone lost its title placeholder")
-    _set_position(title, arch["regions"]["title"])
-    _fill_placeholder(title, title_text, size_pt=_title_size_pt(title_text, manifest),
-                      latin=manifest["typography"]["title"]["latin"],
-                      ea=manifest["typography"]["title"]["face"], algn="ctr")
+    _fill_title(el, page, arch, manifest, "cover", algn="ctr")
     subtitle = find_placeholder(el, "body")
     if subtitle is None:
         raise RenderError("cover clone lost its subtitle placeholder")
@@ -554,11 +540,12 @@ def fill_agenda(slide, page: dict, arch: dict, manifest: dict) -> None:
                                           latin=label_type["face"],
                                           ea=label_type["face"], algn="ctr")])
     _sp_tree(el).append(label)
-    box = _textbox_shape(el, "AgendaList", arch["regions"]["list"], _next_shape_id(el))
-    _fill_textbox(box, [_text_paragraph(item, size_pt=list_type["size_pt"],
-                                        latin=list_type["face"], ea=list_type["face"])
-                        for item in items])
-    _sp_tree(el).append(box)
+    if items:  # a list block is optional; never emit an empty txBody
+        box = _textbox_shape(el, "AgendaList", arch["regions"]["list"], _next_shape_id(el))
+        _fill_textbox(box, [_text_paragraph(item, size_pt=list_type["size_pt"],
+                                            latin=list_type["face"], ea=list_type["face"])
+                            for item in items])
+        _sp_tree(el).append(box)
 
 
 def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
@@ -581,13 +568,15 @@ def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
     # text blocks and list items share the text region; the template author
     # writes bullet lines as "- " paragraphs in that box (slide 7)
     size = body["secondary_size_pt"]
-    paragraphs = [
-        _text_paragraph(p, size_pt=size, latin=body["face"], ea=body["face"])
-        for b in page["blocks"] if b["type"] == "text" for p in (b["text"],)
-    ] + [
-        _text_paragraph(f"- {item}", size_pt=size, latin=body["face"], ea=body["face"])
-        for b in page["blocks"] if b["type"] == "list" for item in b["items"]
-    ]
+    paragraphs = []
+    for b in page["blocks"]:
+        if b["type"] == "text":
+            paragraphs.append(_text_paragraph(b["text"], size_pt=size,
+                                              latin=body["face"], ea=body["face"]))
+        elif b["type"] == "list":
+            for item in b["items"]:
+                paragraphs.append(_text_paragraph(f"- {item}", size_pt=size,
+                                                  latin=body["face"], ea=body["face"]))
     if paragraphs:
         box = _textbox_shape(el, "TextArea", arch["regions"]["text"], _next_shape_id(el))
         _fill_textbox(box, paragraphs)
@@ -600,7 +589,7 @@ def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
             f"text-image page carries {len(images)} images but the manifest has "
             f"only {len(slots)} image slots")
     for i, block in enumerate(images):
-        _add_fitted_picture(slide, resolve_image_path(block["path"], image_root), slots[i])
+        _add_fitted_picture(slide, vd.resolve_image_path(block["path"], image_root), slots[i])
         if block.get("caption"):
             _add_caption(el, slots[i], block["caption"], manifest, i + 1)
 
@@ -617,7 +606,7 @@ def fill_chart_focus(slide, page: dict, arch: dict, manifest: dict,
 
     if len(images) != 1:
         raise RenderError(f"chart-focus expects exactly 1 image block, got {len(images)}")
-    _add_fitted_picture(slide, resolve_image_path(images[0]["path"], image_root),
+    _add_fitted_picture(slide, vd.resolve_image_path(images[0]["path"], image_root),
                         arch["regions"]["chart"])
 
     if texts:

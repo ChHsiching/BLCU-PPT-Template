@@ -404,6 +404,16 @@ def test_render_full_fixture(tmp_path):
         "标题和内容", "标题和内容", "标题和内容", "三logo标题页",
     ]
 
+    # -- every page carries its deck title (pages with a title placeholder:
+    #    cover, text-formula, text-image, chart-focus, closing; the agenda
+    #    page's title block lands in the rebuilt label box, asserted below)
+    for i, page in enumerate(deck["pages"]):
+        if page["archetype"] == "agenda":
+            continue
+        title = by_ph(prs.slides[i], "title")
+        assert title is not None, f"slide {i + 1} lost its title placeholder"
+        assert title.text_frame.text == page["blocks"][0]["text"], f"slide {i + 1} title"
+
     # -- page 2: agenda = rebuilt safe geometry, no title placeholder at all
     agenda = prs.slides[1]
     assert by_ph(agenda, "title") is None  # slide 2 carries no title placeholder
