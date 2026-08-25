@@ -1,0 +1,249 @@
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  background: #202020;
+  color: #000;
+  overflow: hidden;
+  font-synthesis: none;
+  -webkit-font-smoothing: antialiased;
+}
+
+.viewport {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  user-select: none;
+}
+
+/* fixed 16:9 stage, scaled to fit the viewport */
+.stage {
+  width: 1280px;
+  height: 720px;
+  flex: none;
+  position: relative;
+  background: #fff;
+  overflow: hidden;
+  box-shadow: 0 6px 40px rgba(0, 0, 0, 0.5);
+  transform-origin: center center;
+  cursor: default;
+}
+
+.slide {
+  position: absolute;
+  inset: 0;
+}
+
+/* text regions: inner padding mirrors the pptx boxes' lIns/tIns (0.1in/0.05in) */
+.region-text {
+  padding: 4.7px 9.4px;
+  line-height: 1.5;
+  overflow: hidden;
+}
+
+.region-text p {
+  margin-bottom: 0.5em;
+}
+
+.region-text p:last-child {
+  margin-bottom: 0;
+}
+
+.title-bar {
+  display: flex;
+  align-items: center;
+  padding: 0 9.4px;
+  line-height: 1.25;
+  overflow: hidden;
+}
+
+/* cover / closing */
+.cover-title {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  line-height: 1.3;
+}
+
+.cover-subtitle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+}
+
+/* agenda */
+.agenda-label {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  letter-spacing: 0.08em;
+}
+
+.agenda-list {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-evenly;
+  line-height: 1.4;
+}
+
+.agenda-item.is-visible {
+  animation: item-in 0.25s ease-out;
+}
+
+/* formulas: centered stack in the formula region */
+.formula-area {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 1em;
+  padding: 9.4px;
+  overflow: hidden;
+}
+
+.formula .katex-display {
+  margin: 0;
+}
+
+/* KaTeX's own sheet sizes .katex at 1.21em; the manifest formula size is the
+   truth, so cancel the inflation at the .katex root */
+.formula .katex {
+  font-size: 1em;
+}
+
+/* text-image */
+.subhead {
+  display: flex;
+  align-items: center;
+  white-space: nowrap;
+}
+
+.is-hidden {
+  visibility: hidden;
+}
+
+.is-visible {
+  visibility: visible;
+}
+
+p.is-visible {
+  animation: item-in 0.25s ease-out;
+}
+
+.image-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.image-slot img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+}
+
+.image-caption {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.85);
+  text-align: center;
+  line-height: 1.3;
+}
+
+/* page number: like the pptx sldNum field, bottom-right */
+.page-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* entrance animations (light by design) */
+.slide-enter {
+  position: absolute;
+  inset: 0;
+  animation: slide-in 0.35s ease-out;
+}
+
+@keyframes slide-in {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@keyframes item-in {
+  from {
+    opacity: 0;
+    transform: translateX(10px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide-enter,
+  .agenda-item.is-visible,
+  p.is-visible {
+    animation: none;
+  }
+}
+
+/* controls overlay the stage's bottom band; bottom-center avoids the
+   page-number corner and stays below the content safe area (6.9in of 7.5in) */
+.controls {
+  position: fixed;
+  left: 50%;
+  transform: translateX(-50%);
+  bottom: 8px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ddd;
+  font: 14px/1 "SimHei", "Noto Sans SC", sans-serif;
+}
+
+.controls button {
+  width: 32px;
+  height: 32px;
+  border: 1px solid #666;
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.4);
+  color: #ddd;
+  font-size: 18px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.controls button:hover {
+  background: rgba(0, 0, 0, 0.7);
+}
+
+.progress {
+  min-width: 48px;
+  text-align: center;
+  user-select: none;
+}
