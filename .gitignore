@@ -1,6 +1,11 @@
 # local tooling state
 .mimosa/
 
+# python
+__pycache__/
+*.pyc
+.pytest_cache/
+
 # template pptx originals stay local-only (never for GitHub)
 templates/*/*.pptx
 
