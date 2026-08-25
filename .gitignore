@@ -1,0 +1,15 @@
+# local tooling state
+.mimosa/
+
+# template pptx stays local-only (not for GitHub)
+docs/templates/*.pptx
+
+# node (for future web-ppt / tooling work)
+node_modules/
+dist/
+build/
+*.log
+
+# OS / editor
+.DS_Store
+Thumbs.db
