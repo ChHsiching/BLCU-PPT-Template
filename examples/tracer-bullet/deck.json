@@ -1,0 +1,124 @@
+{
+  "template": "blcu-report",
+  "meta": {
+    "presenter": "陈晨",
+    "date": "2026-08-26"
+  },
+  "pages": [
+    {
+      "archetype": "cover",
+      "blocks": [
+        { "type": "title", "text": "AdamW 优化器复现与实验分析" },
+        { "type": "text", "text": "汇报人:陈晨 2026-08-26" }
+      ]
+    },
+    {
+      "archetype": "agenda",
+      "blocks": [
+        { "type": "title", "text": "汇报大纲" },
+        {
+          "type": "list",
+          "items": [
+            "一 背景：正则与自适应学习率的耦合",
+            "二 方法：Adam 更新与 AdamW 解耦",
+            "三 复现设置：数据、网络与超参",
+            "四 实验：训练曲线与精度对比",
+            "五 结论：复现发现与后续计划"
+          ]
+        }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        { "type": "title", "text": "背景：L2 正则与自适应学习率的耦合" },
+        {
+          "type": "formula",
+          "latex": "g_t = \\nabla f(\\theta_{t-1}) + \\lambda \\theta_{t-1}"
+        },
+        {
+          "type": "text",
+          "text": "Adam 把 L2 正则项加进梯度后，会被自适应学习率缩放：梯度历史大的维度正则被削弱、小的被放大，等效衰减随训练变化，调参不直观。"
+        }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        { "type": "title", "text": "方法：Adam 更新与 AdamW 解耦" },
+        {
+          "type": "formula",
+          "latex": "m_t = \\beta_1 m_{t-1} + (1-\\beta_1) g_t, \\quad v_t = \\beta_2 v_{t-1} + (1-\\beta_2) g_t^2"
+        },
+        {
+          "type": "formula",
+          "latex": "\\theta_t = \\theta_{t-1} - \\eta \\left( \\frac{\\hat{m}_t}{\\sqrt{\\hat{v}_t} + \\epsilon} + \\lambda \\theta_{t-1} \\right)"
+        },
+        {
+          "type": "text",
+          "text": "上式：一阶/二阶矩估计（偏差修正后为 m̂、v̂）；下式：AdamW 更新，衰减项 λθ 不进动量与二阶矩，正则强度各维度一致。"
+        }
+      ]
+    },
+    {
+      "archetype": "text-image",
+      "blocks": [
+        { "type": "title", "text": "复现设置：数据、网络与超参" },
+        { "type": "subhead", "text": "训练流程与关键超参" },
+        {
+          "type": "text",
+          "text": "三种优化器在相同数据与网络下训练，仅优化器与正则方式不同。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "CIFAR-10，ResNet-18，batch 128",
+            "训练 100 epoch，3 随机种子取均值",
+            "学习率 1e-3（SGD 为 0.1+动量）",
+            "权重衰减：L2 耦合 vs AdamW 解耦"
+          ]
+        },
+        {
+          "type": "image",
+          "path": "material/images/pipeline.png",
+          "caption": "训练流程：前向、损失与解耦衰减更新"
+        }
+      ]
+    },
+    {
+      "archetype": "chart-focus",
+      "blocks": [
+        { "type": "title", "text": "实验：训练损失曲线" },
+        {
+          "type": "image",
+          "path": "material/images/loss-curves.png"
+        },
+        {
+          "type": "text",
+          "text": "AdamW 损失下降更平稳；Adam+L2 后期收敛明显偏慢。"
+        }
+      ]
+    },
+    {
+      "archetype": "chart-focus",
+      "blocks": [
+        { "type": "title", "text": "实验：最终测试精度" },
+        {
+          "type": "image",
+          "path": "material/images/acc-bars.png"
+        },
+        {
+          "type": "text",
+          "text": "AdamW 平均 95.2%，较 Adam+L2 高 1.3 个百分点，种子间方差更小。"
+        }
+      ]
+    },
+    {
+      "archetype": "closing",
+      "blocks": [
+        { "type": "title", "text": "谢谢聆听" },
+        { "type": "text", "text": "汇报人:陈晨" }
+      ]
+    }
+  ]
+}
