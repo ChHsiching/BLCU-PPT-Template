@@ -14,6 +14,18 @@ _Avoid_: 资源、源文件、输入文件
 一个 `.pptx` 原件及其衍生物（manifest、提取的品牌资产）的集合，住在 `templates/<id>/`。当前唯一模板为 `blcu-report`。完整 pptx 原件永不入库（gitignored），衍生物入库。
 _Avoid_: 主题（theme）、皮肤
 
+**框架（Frame）**:
+模板中固定照搬的部分：母版品牌层（绿条、logo、页码、封面版式）及绿条内标题样式。样式决策只到"保留"，不做再设计。
+_Avoid_: 母版（那是 OOXML 部件名）、模板整体
+
+**体裁（Genre）**:
+从模板学到的"汇报长什么样"：页型构成（方法靠公式、实验靠图）、密度水平、结构惯例。只学内容与形式，不学具体样式与坐标。
+_Avoid_: 风格、格式
+
+**内容形式（Content form）**:
+框架之外内容区的全部样式决策域：字体字号字重、栅格间距、颜色、图表规范、图文排布。归本项目自行设计，永不从模板作者的习惯继承。
+_Avoid_: 排版（口语泛称）、布局（仅指几何摆放）
+
 **页型（Archetype）**:
 一类可克隆页面形态的布局规范（cover / agenda / text-formula / text-image / chart-focus / closing），是布局知识的单一真相源。deck.json 只引用页型，不携带坐标。
 _Avoid_: 版式（layout，指 OOXML 的 slideLayout）、页面类型
