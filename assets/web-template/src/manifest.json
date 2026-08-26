@@ -58,6 +58,10 @@
       "size_pt": 15
     },
     "web_fallbacks": {
+      "Noto Sans SC": [
+        "PingFang SC",
+        "微软雅黑"
+      ],
       "黑体": [
         "SimHei",
         "Noto Sans SC"
@@ -70,6 +74,139 @@
         "KaiTi",
         "Noto Serif SC"
       ]
+    },
+    "tokens": {
+      "note": "S2（#16）新增：内容形式样式系统的完整 token，样式唯一真相源。additive 落位——S3(#18)/S4(#19) 渲染器切换到本树后，上方旧字段（title/cover_subtitle/body/accent/subhead_size_pt/agenda_label/agenda_list/caption）删除；web_fallbacks 保留（新旧字面共用）。",
+      "face": "Noto Sans SC",
+      "latin_face": "Noto Sans SC",
+      "face_note": "全域唯一字族（思源黑体同源），ea/latin 同面——思源自带 latin 字形，不再另配 Calibri/Times。层级只靠字重 + 颜色表达，不新增字号差。",
+      "weights": {
+        "regular": 400,
+        "bold": 700
+      },
+      "roles": {
+        "title": {
+          "size_pt": 44,
+          "weight": "bold",
+          "color": "#000000"
+        },
+        "title_long": {
+          "size_pt": 28,
+          "weight": "bold",
+          "color": "#000000",
+          "over_chars": 15,
+          "note": "超 15 字（CJK 等宽计）降档，字重颜色不变"
+        },
+        "cover_subtitle": {
+          "size_pt": 24,
+          "weight": "regular",
+          "color": "#000000",
+          "note": "封面/结束页汇报人行；字号承旧，仅换字面字重"
+        },
+        "subhead": {
+          "size_pt": 24,
+          "weight": "bold",
+          "color": "#548235"
+        },
+        "body": {
+          "size_pt": 20,
+          "weight": "regular",
+          "color": "#000000"
+        },
+        "secondary": {
+          "size_pt": 18,
+          "weight": "regular",
+          "color": "#595959",
+          "note": "次级文字/图表评注"
+        },
+        "agenda_label": {
+          "size_pt": 40,
+          "weight": "bold",
+          "color": "#000000"
+        },
+        "agenda_list": {
+          "size_pt": 22,
+          "weight": "regular",
+          "color": "#000000"
+        },
+        "caption": {
+          "size_pt": 12,
+          "weight": "regular",
+          "color": "#FFFFFF",
+          "scrim": {
+            "color": "#000000",
+            "alpha_pct": 60
+          },
+          "note": "黑纱白字叠加条，贴所属图位内部底边"
+        },
+        "formula": {
+          "size_pt": 20,
+          "face": "Cambria Math",
+          "note": "OMML 硬约束，维持不动"
+        }
+      },
+      "page_number": {
+        "note": "母版自带（华文中宋/Times 15pt 右下），维持不动"
+      },
+      "role_bindings": {
+        "note": "region→角色绑定，S3/S4 按此取 token，不自行发明字号",
+        "cover": {
+          "title": "title",
+          "subtitle": "cover_subtitle"
+        },
+        "closing": {
+          "title": "title",
+          "subtitle": "cover_subtitle"
+        },
+        "agenda": {
+          "label": "agenda_label",
+          "list": "agenda_list"
+        },
+        "text-formula": {
+          "title": "title",
+          "formula": "formula",
+          "text": "body",
+          "text_full": "body"
+        },
+        "text-image": {
+          "title": "title",
+          "subhead": "subhead",
+          "text": "secondary",
+          "text_column": "secondary",
+          "caption": "caption"
+        },
+        "chart-focus": {
+          "title": "title",
+          "comment": "secondary"
+        }
+      },
+      "emphasis": {
+        "marker": "**",
+        "weight": "bold",
+        "color": "#548235",
+        "note": "正文内 **关键词** 文本级约定，渲染为绿 Bold 内联 run；不引入 deck.json schema 变更"
+      },
+      "spacing": {
+        "line_spacing": 1.5,
+        "space_before_pt": 12,
+        "left_axis_in": 0.74,
+        "textbox_inset_in": 0.1,
+        "textbox_inset_v_in": 0.05,
+        "note": "正文行距 1.5、段前 12pt 全页型统一；内容框左轴对齐 0.74；文本框内边距左右各 0.1in、上下各 0.05in"
+      },
+      "colors": {
+        "accent": "#548235",
+        "accent_projection_dark": "#375623",
+        "band": "#C5E0B4",
+        "colors_note": "单一强调绿 #548235（母版条色同族深化），仅「小标题着色、关键词加粗着色」两用法；投影发灰场景降 #375623；母版条色 #C5E0B4 永不作文字色"
+      },
+      "image": {
+        "hairline": {
+          "color": "#D9D9D9",
+          "width_pt": 0.75,
+          "note": "白底截图发丝描边，防图融入白色背景"
+        }
+      }
     }
   },
   "colors": {
@@ -77,18 +214,27 @@
     "background": "#FFFFFF",
     "detail_ref": "extracted/colors.json"
   },
+  "fonts": {
+    "embed": {
+      "face": "Noto Sans SC",
+      "regular": "../../fonts/NotoSansSC-Regular.ttf",
+      "bold": "../../fonts/NotoSansSC-Bold.ttf",
+      "note": "渲染时按 deck 实际用字做 fonttools 子集化，以 EOT fntdata 部件嵌入成品（PowerPoint 实测认此格式）；fonttools 缺失时降级为仅声明字面并警告。路径相对本 manifest；SIL OFL 许可见 fonts/OFL-LICENSE.txt"
+    }
+  },
   "brand_media_ref": "extracted/media.json",
   "budget_semantics": {
-    "chars": "字数按 CJK 等宽计（半角字符计 0.5）；容量核定扣除文本框内边距（左右各 0.1in）",
+    "chars": "字数按 CJK 等宽计（半角字符计 0.5）。核定模型：扣除文本框内边距（左右各 0.1in、上下各 0.05in）后，行高按 1.2em（PowerPoint CJK 默认单倍行距）——多行容量 = (可用宽÷字宽) × (可用高÷(1.2×字宽)) × 0.85 向下取整；单行上限 = 可用宽÷字宽 向下取整（title 档再乘 0.85）。逐页型核定算式见 archetypes.*.budget_derivation。注意：正文行距 token 为 1.5（typography.tokens.spacing），1.2em 是预算模型的历史核定常数——S3(#18) 落地 1.5 行距节奏后，须以 COM 渲染证据复核多行容量并同步更新本节与各 budget_derivation",
     "title_max_chars": "页标题/标签字段长度上限",
     "text_blocks_max": "正文文本块个数上限（不含小标题块，小标题由 subhead_max_chars 单独约束）",
     "text_block_max_chars": "单个文本块字数上限",
-    "text_total_max_chars": "同页小标题 + 全部文本块 + 列表项字数之和的上限——物理容量主约束，按 region 扣除内边距后的可用尺寸与声明字号的最坏情况核定",
-    "subhead_max_chars": "小标题块字数上限（单行 @subhead_size_pt；无小标题区的页型为 0）",
+    "text_total_max_chars": "同页小标题 + 全部文本块 + 列表项字数之和的上限，按 region 扣内边距后的物理排字容量 × 0.85 安全系数核定（0.85：PowerPoint 实际换行早于理想排字、中英混排宽度波动）",
+    "subhead_max_chars": "小标题块字数上限（单行 @typography.tokens.roles.subhead；无小标题区的页型为 0）",
     "list_items_max / list_item_max_chars": "列表条数 / 单条字数上限（条目字数计入 text_total）",
     "formulas_max": "显示公式个数上限",
     "images_min / images_max": "图片数量下/上限",
-    "caption_max_chars": "单条图注字数上限；图注渲染为所属图位内部底边的叠加条，不占用图位外空间"
+    "caption_max_chars": "单条图注字数上限；图注渲染为所属图位内部底边的叠加条，不占用图位外空间",
+    "text_total_max_chars_full": "可选：页面无公式块（文字落入全高/主文字区）时放宽块与总量上限到该值"
   },
   "common_regions": {
     "title": {
@@ -138,7 +284,8 @@
         "images_min": 0,
         "images_max": 0,
         "caption_max_chars": 0
-      }
+      },
+      "budget_derivation": "title_max_chars 16 为仪式页锚定值（44pt 全宽单行容量 floor(21.48)=21，锚得更紧：封面标题求短，非容量导出）；text_block/total 17 = floor((6.0−0.2)÷(24/72))，subtitle 区单行 @24pt（cover_subtitle 字号承旧，S2 复核未变）"
     },
     "agenda": {
       "purpose": "目录/总览：居中主题标签 + 分节列表",
@@ -169,10 +316,10 @@
         }
       },
       "budget": {
-        "title_max_chars": 4,
+        "title_max_chars": 5,
         "text_blocks_max": 0,
         "text_block_max_chars": 0,
-        "text_total_max_chars": 180,
+        "text_total_max_chars": 427,
         "subhead_max_chars": 0,
         "list_items_max": 6,
         "list_item_max_chars": 30,
@@ -180,7 +327,8 @@
         "images_min": 0,
         "images_max": 0,
         "caption_max_chars": 0
-      }
+      },
+      "budget_derivation": "S2（#16）重核：title_max_chars 5 = floor((3.5−0.2)÷(40/72))，label 区单行 @40pt Bold（48pt/4 → 40pt/5）；text_total_max_chars 427 = floor((11.25−0.2)÷(22/72) × (5.2−0.1)÷(1.2×22/72) × 0.85)，list 区 @22pt（24pt/359 → 22pt/427）；list_item_max_chars 30 为锚定值（22pt 单行容量 floor(36.16)=36 ≥ 30，安全）；list_items_max 6 锚定（一屏章节深度约束，非容量导出）"
     },
     "text-formula": {
       "purpose": "文字 + 原生 OMML 公式页；公式为 0 时即纯文字页",
@@ -188,7 +336,7 @@
         "slide": 3,
         "layout": "标题和内容"
       },
-      "evidence": "slide 3（公式区 Rectangle 2 + 楷体文字区 文本框 3，实测单块 117 字；文字区高度由实测 1.78in 下延至 2.2in——原页该区下方为留白，底边 6.52 仍在安全线内）；公式密集变体见 slide 12/13；text_full 取自 slide 11 实测全高文字框（x 由实测 0.35 归一到标题列 0.74）",
+      "evidence": "slide 3（公式区 Rectangle 2 + 楷体文字区 文本框 3，实测单块 117 字；文字区高度由实测 1.78in 下延至 2.2in——原页该区下方为留白，底边 6.52 仍在安全线内）；公式密集变体见 slide 12/13；text_full 取自 slide 11 实测全高文字框（x 由实测 0.35 归一到标题列 0.74）；text_blocks_max 8 依据 slide 11 的 14 短段落实证（一段一要点），150% 行距+段前 12pt 为 slide 21 实测；公式区/文字区对齐标题栅格(0.74,11.86)为设计修正——模板原框(2.37,10.38)中心轴偏离页面中轴 0.9in 导致公式错位观感",
       "regions": {
         "title": {
           "x": 0.74,
@@ -234,7 +382,8 @@
         "images_max": 0,
         "caption_max_chars": 0,
         "text_total_max_chars_full": 586
-      }
+      },
+      "budget_derivation": "title_max_chars 25 = floor((11.86−0.2)÷(28/72)×0.85)（28pt 降档单行 ×0.85）；text_block/text_total 203 = floor((11.86−0.2)÷(20/72) × (2.0−0.1)÷(1.2×20/72) × 0.85)，text 区 @20pt；text_total_max_chars_full 586 = floor((11.86−0.2)÷(20/72) × (5.58−0.1)÷(1.2×20/72) × 0.85)，text_full 区 @20pt；text_blocks_max 8 依 slide 11 短段落实证（非容量导出）"
     },
     "text-image": {
       "purpose": "图文混排：小标题 + 文字块 + 1–4 张浮动图（可带图注）",
@@ -242,7 +391,7 @@
         "slide": 7,
         "layout": "标题和内容"
       },
-      "evidence": "slide 7（小标题 Rectangle 49 + 文字 Rectangle 51 + 4 图位；小标题框收窄为左列 5.9in 单行（右缘避开图位 2/3），文字区高度由实测 1.54in 下延至 2.5in——原页该区下方为留白，右缘 8.66 不及 slot[3] 左缘 8.78）；双图变体见 slide 9",
+      "evidence": "slide 7（小标题 Rectangle 49 + 文字 Rectangle 51 + 4 图位；小标题框收窄为左列 5.9in 单行（右缘避开图位 2/3），文字区高度由实测 1.54in 下延至 2.5in——原页该区下方为留白，右缘 8.66 不及 slot[3] 左缘 8.78）；双图变体见 slide 9；单图变体（image_primary/text_column）为设计新增：左文右图整版布局，非模板原框",
       "regions": {
         "title": {
           "x": 0.74,
@@ -293,24 +442,37 @@
           "y": 6.82,
           "w": 0.63,
           "h": 0.68
+        },
+        "image_primary": {
+          "x": 6.75,
+          "y": 1.51,
+          "w": 5.8,
+          "h": 5.19
+        },
+        "text_column": {
+          "x": 0.74,
+          "y": 2.29,
+          "w": 5.65,
+          "h": 4.41
         }
       },
       "budget": {
         "title_max_chars": 25,
         "text_blocks_max": 1,
-        "text_block_max_chars": 110,
-        "text_total_max_chars": 120,
-        "subhead_max_chars": 14,
+        "text_block_max_chars": 216,
+        "text_total_max_chars": 216,
+        "subhead_max_chars": 17,
         "list_items_max": 4,
         "list_item_max_chars": 31,
         "formulas_max": 0,
         "images_min": 1,
         "images_max": 4,
         "caption_max_chars": 30
-      }
+      },
+      "budget_derivation": "S2（#16）重核：subhead_max_chars 17 = floor((5.9−0.2)÷(24/72))，subhead 区单行 @24pt Bold（28pt/14 → 24pt/17）。其余复核未变：title_max_chars 25 = floor((11.86−0.2)÷(28/72)×0.85)；text_block/total 216 = floor((8.16−0.2)÷(18/72) × (2.5−0.1)÷(1.2×18/72) × 0.85)，text 区 @18pt 次级；list_item_max_chars 31 = floor((8.16−0.2)÷(18/72))，'- ' 前缀占 1 字宽由 0.85 余量吸收；caption_max_chars 30 为锚定值——12pt 单行宽 5.0in，slot[0]（可用 5.45in）与 image_primary（可用 5.6in）内单行放得下，窄图位 slot[1–3] 需更短图注"
     },
     "chart-focus": {
-      "purpose": "图表主导页：一张大图 + 侧评注（评注用 body.secondary_size_pt）",
+      "purpose": "图表主导页：一张大图 + 侧评注（评注角色见 typography.tokens.role_bindings）",
       "clone": {
         "slide": 18,
         "layout": "标题和内容",
@@ -346,8 +508,8 @@
       "budget": {
         "title_max_chars": 25,
         "text_blocks_max": 1,
-        "text_block_max_chars": 60,
-        "text_total_max_chars": 60,
+        "text_block_max_chars": 59,
+        "text_total_max_chars": 59,
         "subhead_max_chars": 0,
         "list_items_max": 0,
         "list_item_max_chars": 0,
@@ -355,7 +517,8 @@
         "images_min": 1,
         "images_max": 1,
         "caption_max_chars": 0
-      }
+      },
+      "budget_derivation": "title_max_chars 25 = floor((11.86−0.2)÷(28/72)×0.85)；text_block/total 59 = floor((2.5−0.2)÷(18/72) × (2.4−0.1)÷(1.2×18/72) × 0.85)，comment 区 @18pt 次级（字号未变，S2 复核未变）"
     },
     "closing": {
       "purpose": "结束页：致谢语（+ 可选汇报人行）；封面的内容变体",
@@ -391,7 +554,8 @@
         "images_min": 0,
         "images_max": 0,
         "caption_max_chars": 0
-      }
+      },
+      "budget_derivation": "title_max_chars 8 为仪式页锚定值（致谢语求短）；text_block/total 16 为锚定值（同 cover 副标题框，公式值 floor(17.4)=17，锚得更紧；S2 复核未变）"
     }
   }
 }

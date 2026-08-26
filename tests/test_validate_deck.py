@@ -365,12 +365,13 @@ class TestBudgets:
         assert any(f.code == "budget.caption_chars" and f.path == "pages[5].blocks[1].caption" for f in findings)
 
     def test_subhead_over_chars(self):
-        # text-image subhead_max_chars = 14
-        deck = over(4, 1, "text", "一二三四五六七八九十一二三四五")
+        # text-image subhead_max_chars 从 manifest 读取（S2 重核：28pt/14 → 24pt/17）
+        cap = BUDGETS["text-image"]["budget"]["subhead_max_chars"]
+        deck = over(4, 1, "text", "一" * (cap + 1))
         findings = validate(deck)
         f = next(f for f in findings if f.code == "budget.subhead_chars")
         assert f.path == "pages[4].blocks[1]"
-        assert "subhead_max_chars" in f.message and "14" in f.message
+        assert "subhead_max_chars" in f.message and str(cap) in f.message
 
     def test_subhead_forbidden_on_text_formula(self):
         # text-formula subhead_max_chars = 0
@@ -378,6 +379,31 @@ class TestBudgets:
         deck["pages"][2]["blocks"].append({"type": "subhead", "text": "符号说明"})
         findings = validate(deck)
         assert any(f.code == "budget.subhead_chars" and f.path == "pages[2].blocks[4]" for f in findings)
+
+
+class TestS2BudgetRecheck:
+    """S2（#16）重核预算：值钉死 + 边界锁定（恰好达上限可过，超一档即拒）。
+
+    值变动来源：小标题 28→24pt、agenda 标签 48→40pt、agenda 列表 24→22pt
+    （manifest typography.tokens.roles；算式见各 archetype 的 budget_derivation）。
+    """
+
+    def test_rechecked_values_pinned(self):
+        assert BUDGETS["text-image"]["budget"]["subhead_max_chars"] == 17
+        assert BUDGETS["agenda"]["budget"]["title_max_chars"] == 5
+        assert BUDGETS["agenda"]["budget"]["text_total_max_chars"] == 427
+
+    def test_subhead_boundary(self):
+        cap = BUDGETS["text-image"]["budget"]["subhead_max_chars"]
+        assert validate(over(4, 1, "text", "一" * cap)) == []
+        assert any(f.code == "budget.subhead_chars"
+                   for f in validate(over(4, 1, "text", "一" * (cap + 1))))
+
+    def test_agenda_label_boundary(self):
+        cap = BUDGETS["agenda"]["budget"]["title_max_chars"]
+        assert validate(over(1, 0, "text", "一" * cap)) == []
+        assert any(f.code == "budget.title_chars"
+                   for f in validate(over(1, 0, "text", "一" * (cap + 1))))
 
 
 class TestImages:
