@@ -293,6 +293,18 @@ def test_web_qa_green_then_defect_then_export(tmp_path):
     assert proc.returncode == 1
     assert "image.path_missing" in proc.stdout
 
+    # defect phase 2: a missing brand asset must fail the brand-layer gate
+    shutil.copyfile(FIXTURE_DIR / "material" / "images" / "main-results-bar.png",
+                    web / "public" / "material" / "images" / "main-results-bar.png")
+    (web / "public" / "brand" / "image7.png").unlink()
+    proc = subprocess.run(
+        [sys.executable, str(QA_WEB_SCRIPT), str(web)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=300,
+    )
+    assert proc.returncode == 1
+    assert "web.brand_asset_broken" in proc.stdout
+
 
 def test_web_qa_exit_2_without_node_modules(tmp_path):
     web = tmp_path / "bare"

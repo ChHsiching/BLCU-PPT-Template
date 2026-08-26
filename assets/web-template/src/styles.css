@@ -168,6 +168,18 @@ p.is-visible {
   line-height: 1.3;
 }
 
+/* master brand layer (#17): measured bands/logos from manifest.brand_layer,
+   rendered before content — text sits on top, like the pptx master z-order */
+.brand-band {
+  pointer-events: none;
+}
+
+.brand-logo {
+  display: block;
+  object-fit: contain;
+  pointer-events: none;
+}
+
 /* page number: like the pptx sldNum field, bottom-right */
 .page-number {
   display: flex;

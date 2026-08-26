@@ -6,6 +6,7 @@ import { AgendaPage } from './pages/AgendaPage'
 import { TextFormulaPage } from './pages/TextFormulaPage'
 import { TextImagePage } from './pages/TextImagePage'
 import { ChartFocusPage } from './pages/ChartFocusPage'
+import { ContentBrand, CoverBrand } from './components/BrandLayer'
 import { STAGE_W, STAGE_H, regionStyle, ptToPx, fontStack, buildSteps, firstStepOfPage } from './lib/layout'
 
 const T = manifest.typography
@@ -34,9 +35,12 @@ function Slide({ page, pageIndex, revealed }) {
   const arch = manifest.archetypes[page.archetype]
   const props = { page, arch }
   const revealedProps = { ...props, revealed }
+  const isCover = page.archetype === 'cover' || page.archetype === 'closing'
   return (
     <div className="slide">
-      {page.archetype === 'cover' || page.archetype === 'closing' ? (
+      {/* master brand layer first: content text draws on the bands */}
+      {isCover ? <CoverBrand /> : <ContentBrand />}
+      {isCover ? (
         <CoverPage {...props} />
       ) : page.archetype === 'agenda' ? (
         <AgendaPage {...revealedProps} />

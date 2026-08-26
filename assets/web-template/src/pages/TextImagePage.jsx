@@ -1,19 +1,9 @@
 import manifest from '../manifest.json'
 import { TitleBar } from '../components/TitleBar'
 import { regionStyle, ptToPx, fontStack, blocksOf, titleOf } from '../lib/layout'
+import { assetUrl } from '../lib/assets'
 
 const T = manifest.typography
-
-// Image URL: deck paths are scaffold-relative ("material/images/x.png",
-// rewritten by scripts/scaffold_web.py); BASE_URL keeps them correct under
-// any Vite base and in the relocatable production build. Each segment is
-// percent-encoded so filenames with URL metacharacters (#, ?, spaces, CJK)
-// resolve to the right file instead of being parsed as fragment/query.
-export function assetUrl(path) {
-  const encoded = path.split('/').map(encodeURIComponent).join('/')
-  const base = import.meta.env.BASE_URL
-  return base.endsWith('/') ? base + encoded : base + '/' + encoded
-}
 
 // FittedSlot: image contain-fitted into a manifest slot (aspect kept,
 // centered), mirroring render_pptx._add_fitted_picture; an optional caption

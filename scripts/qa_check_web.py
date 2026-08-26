@@ -17,6 +17,11 @@ Checks, each a finding on failure:
   formulas every formula block is rendered by KaTeX (.formula .katex present,
            zero .katex-error elements)
   images   every image block rendered an <img> that actually loaded
+  brand    the master brand layer per manifest.brand_layer: band/logo counts,
+           band geometry + color against the measured regions, every logo
+           asset loaded, the right page number (none on cover/closing), plus
+           a rendered-pixel spot-check of band color/position (element
+           screenshot + PIL; without PIL the pixel check degrades to a note)
   console  zero console errors / uncaught page errors across the session
 
 Screenshots: every page, fully revealed, captured to --screenshots DIR as
@@ -147,7 +152,8 @@ def _deck_title(page: dict) -> str | None:
     return next((b["text"] for b in page["blocks"] if b.get("type") == "title"), None)
 
 
-def check_web(base_url: str, deck: dict, screenshots: Path | None) -> list:
+def check_web(base_url: str, deck: dict, screenshots: Path | None,
+              manifest: dict | None = None, notes: list | None = None) -> list:
     """Drive the running presentation; return findings (vd.Finding)."""
     from playwright.sync_api import sync_playwright
 
@@ -234,6 +240,14 @@ def check_web(base_url: str, deck: dict, screenshots: Path | None) -> list:
 
                 findings.extend(_check_page_dom(page, pages[i - 1], i))
 
+                # brand-layer checks need the entrance animation settled
+                # (it translates the whole slide for 0.35s after a page change)
+                page.wait_for_timeout(450)
+                findings.extend(_check_page_brand(page, pages[i - 1], manifest, i,
+                                                  notes or []))
+                findings.extend(_check_brand_pixels(page, pages[i - 1], manifest,
+                                                    i, notes or []))
+
                 if screenshots is not None:
                     page.screenshot(path=str(screenshots / f"page-{i:02d}.png"))
         finally:
@@ -310,6 +324,206 @@ def _check_page_dom(page, deck_page: dict, i: int) -> list:
             f"image did not load: {src}",
         ))
     return findings
+
+
+# ---------------------------------------------------------------------------
+# brand layer (issue #17): master bands/logos/page numbers, manifest-measured
+# ---------------------------------------------------------------------------
+
+GEO_TOL_IN = 0.05  # DOM-rect tolerance in slide inches (rounding + subpixel)
+
+
+def _brand_expect(manifest: dict, archetype: str):
+    """(expected logo count, [(region, name)] incl. the band first) or None
+    when the manifest carries no brand_layer (a finding by itself)."""
+    bl = manifest.get("brand_layer") if isinstance(manifest, dict) else None
+    if not isinstance(bl, dict):
+        return None
+    if archetype in ("cover", "closing"):
+        cover = bl["cover"]
+        elements = [(cover["mid_band"], "mid_band")]
+        elements += [(el, f"logos[{j}]") for j, el in enumerate(cover["logos"])]
+        elements.append((cover["corner_logo_bar"], "corner_logo_bar"))
+        return len(cover["logos"]) + 1, elements
+    content = bl["content"]
+    return 1, [(content["top_band"], "top_band"), (content["corner_logo"], "corner_logo")]
+
+
+def _check_page_brand(page, deck_page: dict, manifest: dict | None, i: int,
+                      notes: list) -> list:
+    findings: list[vd.Finding] = []
+    if manifest is None:
+        return findings  # pre-brand manifest: pixel check below reports it once
+    expect = _brand_expect(manifest, deck_page.get("archetype", ""))
+    if expect is None:
+        findings.append(vd.Finding(
+            f"page {i}", "web.brand_missing",
+            "manifest has no brand_layer section; the web brand layer "
+            "(bands/logos/page numbers) cannot be checked or rendered",
+        ))
+        return findings
+    n_logos, elements = expect
+
+    state = page.evaluate(
+        """() => {
+          const slide = document.querySelector('.slide')
+          const sr = document.querySelector('.stage').getBoundingClientRect()
+          const rect = el => {
+            const r = el.getBoundingClientRect()
+            return {x: r.left - sr.left, y: r.top - sr.top, w: r.width, h: r.height}
+          }
+          return {
+            stageH: sr.height,
+            band: slide.querySelector('.brand-band')
+              ? {...rect(slide.querySelector('.brand-band')),
+                 color: getComputedStyle(slide.querySelector('.brand-band')).backgroundColor}
+              : null,
+            logos: [...slide.querySelectorAll('.brand-logo')].map(im => ({
+              ...rect(im), loaded: im.complete && im.naturalWidth > 0,
+              src: im.getAttribute('src')})),
+            pageNumber: slide.querySelector('.page-number')?.innerText.trim() ?? null,
+          }
+        }""")
+
+    if state["band"] is None:
+        findings.append(vd.Finding(
+            f"page {i}", "web.brand_missing",
+            "no .brand-band rendered on this page",
+        ))
+        return findings
+    if len(state["logos"]) != n_logos:
+        findings.append(vd.Finding(
+            f"page {i}", "web.brand_geometry",
+            f"expected {n_logos} .brand-logo element(s) per manifest.brand_layer, "
+            f"found {len(state['logos'])}",
+        ))
+
+    # geometry: rects are page px on the scaled stage — compare as slide inches
+    stage_h = state["stageH"]
+    to_in = lambda v: v / stage_h * 7.5
+
+    def close(actual, region, name, what):
+        for key in ("x", "y", "w", "h"):
+            got = to_in(actual[key])
+            want = region[key]
+            if abs(got - want) > GEO_TOL_IN:
+                findings.append(vd.Finding(
+                    f"page {i}", "web.brand_geometry",
+                    f"{name} {what} {key}: {got:.3f}in rendered vs "
+                    f"{want:.3f}in measured",
+                ))
+                return
+
+    band_region, _ = elements[0]
+    close(state["band"], band_region, "band", "rect")
+    for (region, name), logo in zip(elements[1:], state["logos"]):
+        close(logo, region, name, "rect")
+        if not logo["loaded"]:
+            findings.append(vd.Finding(
+                f"page {i}", "web.brand_asset_broken",
+                f"brand logo {name} did not load: {logo['src']}",
+            ))
+
+    band_hex = manifest.get("typography", {}).get("tokens", {}).get(
+        "colors", {}).get("band", "").lstrip("#")
+    if band_hex:
+        want = tuple(int(band_hex[k:k + 2], 16) for k in (0, 2, 4))
+        got = [int(c) for c in re.findall(r"\d+", state["band"]["color"])]
+        if len(got) == 3 and tuple(got) != want:
+            findings.append(vd.Finding(
+                f"page {i}", "web.brand_color",
+                f"band computed color rgb{tuple(got)} != manifest "
+                f"tokens.colors.band #{band_hex.upper()}",
+            ))
+
+    # page number: content pages show their 1-based index, cover/closing none
+    if deck_page.get("archetype") in ("cover", "closing"):
+        if state["pageNumber"] is not None:
+            findings.append(vd.Finding(
+                f"page {i}", "web.page_number",
+                f"cover/closing must carry no page number, shows "
+                f"{state['pageNumber']!r}",
+            ))
+    elif state["pageNumber"] != str(i):
+        findings.append(vd.Finding(
+            f"page {i}", "web.page_number",
+            f"page number shows {state['pageNumber']!r}, expected {i!r}",
+        ))
+    return findings
+
+
+def _check_brand_pixels(page, deck_page: dict, manifest: dict | None,
+                        i: int, notes: list) -> list:
+    """Pixel spot-check of band color/position in the rendered stage."""
+    if manifest is None:
+        return []
+    expect = _brand_expect(manifest, deck_page.get("archetype", ""))
+    if expect is None:
+        return []
+    band = expect[1][0][0]
+    band_hex = manifest.get("typography", {}).get("tokens", {}).get(
+        "colors", {}).get("band", "").lstrip("#")
+    if not band_hex:
+        return []
+    want = tuple(int(band_hex[k:k + 2], 16) for k in (0, 2, 4))
+
+    try:
+        from PIL import Image  # noqa: F401
+    except ImportError:
+        note = ("pixel spot-check skipped: PIL unavailable "
+                "(pip install pillow) — DOM geometry/color checks still ran")
+        if note not in notes:
+            notes.append(note)
+        return []
+
+    import io
+    from PIL import Image
+    img = Image.open(io.BytesIO(page.locator(".stage").screenshot())).convert("RGB")
+
+    def px(fx, fy):
+        return img.getpixel((min(img.width - 1, round(fx * img.width)),
+                             min(img.height - 1, round(fy * img.height))))
+
+    def is_band(c):
+        return all(abs(a - b) <= 12 for a, b in zip(c, want))
+
+    def in_(fy):  # pixel row -> slide inches
+        return fy / img.height * 7.5
+
+    # sample column x=0.03W: left of every text/logo region (title axis 0.74in,
+    # corner logo 0.27in but only at the page bottom), so band pixels are pure
+    col, findings = 0.03, []
+    kind = "cover" if deck_page.get("archetype") in ("cover", "closing") else "content"
+    if kind == "content":
+        sample_y = (band["y"] + band["h"] / 2) / 7.5
+        scan = range(0, int(0.3 * img.height))  # band top(0) + bottom edge live here
+    else:
+        sample_y = (band["y"] + band["h"] / 2) / 7.5
+        scan = range(int(0.15 * img.height), int(0.75 * img.height))
+
+    if not is_band(px(col, sample_y)):
+        findings.append(vd.Finding(
+            f"page {i}", "web.brand_pixel",
+            f"band sample at ({col:.0%}W, y={band['y'] + band['h'] / 2:.2f}in) "
+            f"is rgb{px(col, sample_y)}, expected #{band_hex.upper()}",
+        ))
+    rows = [y for y in scan if is_band(px(col, y / img.height))]
+    if not rows:
+        findings.append(vd.Finding(
+            f"page {i}", "web.brand_pixel",
+            f"no band-colored pixels found scanning column {col:.0%}W",
+        ))
+        return findings
+    top, bottom = in_(rows[0]), in_(rows[-1])
+    height = bottom - top + in_(1)
+    if abs(top - band["y"]) > 0.06 or abs(height - band["h"]) > 0.06:
+        findings.append(vd.Finding(
+            f"page {i}", "web.brand_pixel",
+            f"band renders at y={top:.2f}in h={height:.2f}in (scan column "
+            f"{col:.0%}W); measured y={band['y']}in h={band['h']}in",
+        ))
+    return findings
+
 
 
 # ---------------------------------------------------------------------------
@@ -414,14 +628,18 @@ def main(argv=None) -> int:
     if args.screenshots is not None:
         args.screenshots.mkdir(parents=True, exist_ok=True)
 
+    notes: list[str] = []
     try:
         with DevServer(web_dir, args.port, args.startup_timeout) as server:
-            findings.extend(check_web(server.url, deck, args.screenshots))
+            findings.extend(check_web(server.url, deck, args.screenshots,
+                                      manifest, notes))
     except RuntimeError as exc:
         print(f"error: {exc}", file=sys.stderr)
         return 2
 
     extra = {}
+    if notes:
+        extra["notes"] = "; ".join(notes)
     if args.export_pptx is not None:
         try:
             findings.extend(check_export_chain(

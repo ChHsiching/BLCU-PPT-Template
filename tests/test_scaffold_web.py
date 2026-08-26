@@ -323,3 +323,45 @@ def test_scaffolded_project_builds(tmp_path):
     # deck images ship with the build under material/
     for name in ("framework-diagram.png", "attention-heatmap.png", "main-results-bar.png"):
         assert (out / "dist" / "material" / "images" / name).is_file()
+
+
+# ---------------------------------------------------------------------------
+# brand layer (#17): assets ship with the scaffold and ride into every project
+# ---------------------------------------------------------------------------
+
+def _brand_media():
+    import export_brand_assets as eba
+    return sorted(eba.brand_media(load(MANIFEST_PATH)))
+
+
+def test_scaffold_source_carries_all_brand_assets():
+    # every media file named in manifest.brand_layer exists in the scaffold's
+    # public/brand/ (kept in sync by scripts/export_brand_assets.py)
+    assert sorted(p.name for p in (SCAFFOLD_DIR / "public" / "brand").iterdir()) \
+        == _brand_media()
+
+
+def test_brand_assets_ride_along_into_scaffolded_projects(tmp_path):
+    out, proc = scaffold(tmp_path)
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    # brand assets are not sample residue: they ship with every project
+    assert sorted(p.name for p in (out / "public" / "brand").iterdir()) \
+        == _brand_media()
+    for name in _brand_media():
+        assert (SCAFFOLD_DIR / "public" / "brand" / name).read_bytes() \
+            == (out / "public" / "brand" / name).read_bytes()
+
+
+def test_export_brand_assets_refuses_missing_media(tmp_path, capsys):
+    # a half-shipped brand layer must never be produced silently
+    import export_brand_assets as eba
+    manifest = load(MANIFEST_PATH)
+    manifest["brand_layer"]["content"]["corner_logo"]["media"] = "ghost.png"
+    manifest_path = tmp_path / "manifest.json"
+    manifest_path.write_text(json.dumps(manifest, ensure_ascii=False),
+                             encoding="utf-8")
+    rc = eba.main(["--manifest", str(manifest_path),
+                   "--extracted-dir", str(TEMPLATE_DIR / "extracted"),
+                   "--web-public-brand", str(tmp_path / "brand")])
+    assert rc == 2
+    assert "ghost.png" in capsys.readouterr().err

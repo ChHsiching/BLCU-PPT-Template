@@ -250,6 +250,64 @@
       "h": 0.68
     }
   },
+  "brand_layer": {
+    "note": "母版品牌层实测几何（#17；master 形状实测，renderer-pptx 经母版克隆天然携带，renderer-web 按此复刻）。条色单一真相在 typography.tokens.colors.band（#C5E0B4 = 母版 accent6 lumMod 40%/lumOff 60%，两带同色）；条上文字恒黑（母版 titleStyle tx1）。media = extracted/media/ 内品牌图文件名（清单见 extracted/media.json brand_media），web 以 public/brand/<media> 分发，由 scripts/export_brand_assets.py 按 media 字段复制。master1 另有 6 张 0.4in 小图叠放于 (0,0)（image5/6，母版装饰残迹，渲染不可见），不属于品牌层，不复刻。",
+    "content": {
+      "note": "master2「标题和内容」；标题占位即落于顶条内（agenda 标签同，文本骑条下缘为模板原样）",
+      "top_band": {
+        "x": 0.0,
+        "y": 0.0,
+        "w": 13.33,
+        "h": 1.11
+      },
+      "corner_logo": {
+        "x": 0.27,
+        "y": 6.42,
+        "w": 0.9,
+        "h": 0.89,
+        "media": "image7.png"
+      }
+    },
+    "cover": {
+      "note": "master1「三logo标题页」；closing 为 cover 变体，同款。标题区 (0,2.67,13.33,1.93) 与 mid_band 完全重合（标题骑于带上）。中 logo 用矢量 media1.svg（pptx 内为 svg+png 回退对，web 取矢量源）",
+      "logos": [
+        {
+          "x": 3.28,
+          "y": 0.5,
+          "w": 1.62,
+          "h": 1.61,
+          "media": "image1.png"
+        },
+        {
+          "x": 5.86,
+          "y": 0.5,
+          "w": 1.61,
+          "h": 1.62,
+          "media": "media1.svg"
+        },
+        {
+          "x": 8.43,
+          "y": 0.5,
+          "w": 1.72,
+          "h": 1.72,
+          "media": "image2.gif"
+        }
+      ],
+      "mid_band": {
+        "x": 0.0,
+        "y": 2.67,
+        "w": 13.33,
+        "h": 1.93
+      },
+      "corner_logo_bar": {
+        "x": 11.11,
+        "y": 6.49,
+        "w": 1.8,
+        "h": 0.76,
+        "media": "image4.png"
+      }
+    }
+  },
   "archetypes": {
     "cover": {
       "purpose": "封面：主标题 + 汇报人（/日期）行",

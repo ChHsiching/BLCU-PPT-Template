@@ -23,7 +23,7 @@ cd path/to/web-deck && npm install && npm run dev
 - **步进模型**：每页 1 + 列表条数 个 step；方向键 / 空格 / 点击前进，逐步揭示列表项（agenda 与 text-image 的列表）。`#页码` hash 支持直达与刷新定位。
 - **公式**：KaTeX display 模式（对应 pptx 线的 LaTeX→OMML 链）。
 - **字体**：manifest `typography.web_fallbacks` 的本地字体栈（SimHei/STZhongsong/KaiTi）优先，bundled Noto Sans/Serif SC 兜底，无字体缺失方块。
+- **品牌层**（#17）：母版品牌元素按 `manifest.brand_layer` 实测几何复刻——内容页顶条 + 左下 logo + 右下页码；封面/结束页三 logo + 中部大带 + 右下 logo 条。条色取 `typography.tokens.colors.band`，logo 资产在 `public/brand/`（由 `scripts/export_brand_assets.py` 从 `templates/<id>/extracted/media/` 按 manifest media 字段复制）。`src/components/BrandLayer.jsx` 不含任何自创几何。
 - **图片**：deck 图片路径在 scaffold 时改写为 `material/images/<basename>`（Vite public 目录，`assetUrl()` 兼容任意 base）。
-- **品牌层**：三 logo 等母版品牌元素是 pptx 母版的 affordance（extracted 几何未记录其位置），web 端呈现内容层，不摹写 logo。
 
 `src/deck.json`、`src/manifest.json`、`public/material/` 在 scaffold 时会被整体覆盖——样例只服务本模板单跑。

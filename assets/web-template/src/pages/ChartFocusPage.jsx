@@ -1,6 +1,6 @@
 import manifest from '../manifest.json'
 import { TitleBar } from '../components/TitleBar'
-import { assetUrl } from './TextImagePage'
+import { assetUrl } from '../lib/assets'
 import { regionStyle, ptToPx, fontStack, blocksOf, textsOf, titleOf } from '../lib/layout'
 
 const T = manifest.typography
