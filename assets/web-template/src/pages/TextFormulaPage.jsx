@@ -1,28 +1,41 @@
 import manifest from '../manifest.json'
 import { Formula } from '../components/Formula'
 import { TitleBar } from '../components/TitleBar'
-import { regionStyle, ptToPx, fontStack, blocksOf, textsOf, titleOf } from '../lib/layout'
+import { EmphasisText } from '../components/EmphasisText'
+import {
+  regionStyle, textboxPadding, rhythmLineHeight, paraBeforePx, ptToPx,
+  regionRole, regionRoleName, blocksOf, textsOf, titleOf, inToPx,
+} from '../lib/layout'
 
-const T = manifest.typography
+const TK = manifest.typography.tokens
+// The pptx math paragraphs share one rhythm (render_pptx._MATH_PARA_SHELL:
+// 130% line + 16pt before, first included inside the box) — mirrored as the
+// stack's gap and top padding so formulas land where the pptx puts them.
+const MATH_GAP_PT = 16
+const INSET_V_IN = TK.spacing.textbox_inset_v_in
 
 // text-formula: title + stacked display formulas + bottom note band; with no
 // formulas the page is a pure-text page using the full-height region (both
-// variants mirror render_pptx.fill_text_formula).
+// variants mirror render_pptx.fill_text_formula). role_bindings map text and
+// text_full to the body role; body paragraphs flow with the rhythm and the
+// emphasis convention.
 export function TextFormulaPage({ page, arch }) {
+  const archetype = page.archetype
   const formulas = blocksOf(page, 'formula').map((b) => b.latex)
   const texts = textsOf(page)
-  const accent = T.accent
-  const body = T.body
 
   return (
     <>
-      <TitleBar text={titleOf(page)} arch={arch} />
+      <TitleBar text={titleOf(page)} arch={arch} archetype={archetype} />
       {formulas.length > 0 && (
         <div
           className="formula-area"
           style={{
             ...regionStyle(arch.regions.formula),
-            fontSize: ptToPx(T.formula.size_pt),
+            ...textboxPadding(),
+            paddingTop: inToPx(INSET_V_IN) + ptToPx(MATH_GAP_PT),
+            rowGap: ptToPx(MATH_GAP_PT),
+            fontSize: ptToPx(TK.roles.formula.size_pt),
           }}
         >
           {formulas.map((latex, i) => (
@@ -33,17 +46,18 @@ export function TextFormulaPage({ page, arch }) {
       {texts.length > 0 && (
         <div
           className="region-text"
+          data-role={regionRoleName(archetype, 'text')}
+          data-rhythm="1"
           style={{
             ...regionStyle(formulas.length > 0 ? arch.regions.text : arch.regions.text_full),
-            fontFamily: fontStack(formulas.length > 0 ? accent.face : body.face),
-            fontSize: ptToPx(formulas.length > 0 ? accent.size_pt : body.size_pt),
-            // 纯文字页与 pptx 同步：150% 行距 + 段前 12pt（模板 slide 21 实测）
-            ...(formulas.length === 0 && { lineHeight: 1.5 }),
+            ...textboxPadding(),
+            ...rhythmLineHeight(),
+            ...regionRole(archetype, 'text'),
           }}
         >
           {texts.map((t, i) => (
-            <p key={i} style={formulas.length === 0 ? { marginTop: i === 0 ? 0 : ptToPx(12) } : undefined}>
-              {t}
+            <p key={i} style={{ marginTop: paraBeforePx() }}>
+              <EmphasisText text={t} />
             </p>
           ))}
         </div>

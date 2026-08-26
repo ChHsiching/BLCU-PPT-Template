@@ -155,7 +155,13 @@ def _style_math_runs(omml, size_pt: int) -> None:
 def convert_latex_to_omml(latex: str, xsl_path: Path | None = None):
     """LaTeX -> MathML -> OMML; returns an m:oMath element or None on failure.
 
-    None means the caller must use the image fallback.
+    None means the caller must use the image fallback. Two source forms are
+    normalized first, both empirically verified against MML2OMML.XSL:
+    bare \\lVert…\\rVert pairs become \\left…\\right (the XSL reads adjacent
+    norm bars as one delimiter run and silently drops the enclosed operands),
+    and \\, becomes ~ (the XSL drops <mspace> outright, gluing neighbors; ~
+    survives as a real space run — wider mspace macros like \\quad share the
+    drop and remain a known limitation).
     """
     if not HAS_LATEX2MATHML:
         return None
@@ -163,6 +169,9 @@ def convert_latex_to_omml(latex: str, xsl_path: Path | None = None):
         transform = _get_xslt(xsl_path if xsl_path is not None else find_mml2omml_xsl())
         if transform is None:
             return None
+        latex = re.sub(r"(?<!\\left)\\lVert", r"\\left\\lVert", latex)
+        latex = re.sub(r"(?<!\\right)\\rVert", r"\\right\\rVert", latex)
+        latex = latex.replace(r"\,", "~")
         mathml = _l2m.convert(latex)
         result = transform(etree.fromstring(mathml, parser=_XML_PARSER))
         omml = result.getroot()
@@ -490,10 +499,12 @@ def _scrim_fill_xml(scrim: dict) -> str:
 
 
 def _caption_strip_height_in(tokens: dict, caption_role: str) -> float:
-    """One caption line at single spacing (PowerPoint renders spcPct 100% as
-    1.2em — measured, scripts/measure_line_pitch.py) plus both v-insets."""
+    """One caption line at single spacing (spcPct 100% renders as
+    spacing.single_pitch_em — measured, scripts/measure_line_pitch.py) plus
+    both v-insets."""
     size_pt = tokens["roles"][caption_role]["size_pt"]
-    return size_pt * 1.2 / 72 + 2 * float(tokens["spacing"]["textbox_inset_v_in"])
+    pitch = float(tokens["spacing"].get("single_pitch_em", 1.2))
+    return size_pt * pitch / 72 + 2 * float(tokens["spacing"]["textbox_inset_v_in"])
 
 
 def _add_caption(slide_el, pic, text: str, tokens: dict, archetype: str,

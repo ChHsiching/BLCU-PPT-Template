@@ -1,37 +1,39 @@
-import manifest from '../manifest.json'
 import { TitleBar } from '../components/TitleBar'
-import { assetUrl } from '../lib/assets'
-import { regionStyle, ptToPx, fontStack, blocksOf, textsOf, titleOf } from '../lib/layout'
-
-const T = manifest.typography
+import { FittedImage } from '../components/FittedImage'
+import { EmphasisText } from '../components/EmphasisText'
+import {
+  regionStyle, textboxPadding, rhythmLineHeight, paraBeforePx,
+  regionRole, regionRoleName, blocksOf, textsOf, titleOf,
+} from '../lib/layout'
 
 // chart-focus: one dominant chart image in the chart region + a short side
-// comment at secondary body size (render_pptx.fill_chart_focus).
+// comment (render_pptx.fill_chart_focus); the comment flows with the rhythm
+// and the emphasis convention, like every body-flow role.
 export function ChartFocusPage({ page, arch }) {
-  const body = T.body
+  const archetype = page.archetype
   const chart = blocksOf(page, 'image')[0]
   const comments = textsOf(page)
-  const chartRegion = arch.regions.chart
 
   return (
     <>
-      <TitleBar text={titleOf(page)} arch={arch} />
-      {chart && (
-        <div className="image-slot" style={regionStyle(chartRegion)}>
-          <img src={assetUrl(chart.path)} alt={comments[0] ?? ''} draggable={false} />
-        </div>
-      )}
+      <TitleBar text={titleOf(page)} arch={arch} archetype={archetype} />
+      {chart && <FittedImage slot={arch.regions.chart} block={chart} archetype={archetype} />}
       {comments.length > 0 && (
         <div
           className="region-text"
+          data-role={regionRoleName(archetype, 'comment')}
+          data-rhythm="1"
           style={{
             ...regionStyle(arch.regions.comment),
-            fontFamily: fontStack(body.face),
-            fontSize: ptToPx(body.secondary_size_pt),
+            ...textboxPadding(),
+            ...rhythmLineHeight(),
+            ...regionRole(archetype, 'comment'),
           }}
         >
           {comments.map((t, i) => (
-            <p key={i}>{t}</p>
+            <p key={i} style={{ marginTop: paraBeforePx() }}>
+              <EmphasisText text={t} />
+            </p>
           ))}
         </div>
       )}

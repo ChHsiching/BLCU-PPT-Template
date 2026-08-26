@@ -2,8 +2,10 @@
 //
 // The manifest (src/manifest.json, overwritten by scripts/scaffold_web.py from
 // templates/<id>/manifest.json) is the single source of truth for regions and
-// typography, exactly as it is for renderer-pptx. This module only translates
-// manifest inches/points into stage pixels — it invents no layout of its own.
+// the typography.tokens role system, exactly as it is for renderer-pptx. This
+// module only translates manifest inches/points into stage pixels — it
+// invents no layout or style of its own (the mirrors of render_pptx helpers
+// are noted per export).
 import manifest from '../manifest.json'
 
 export const SLIDE_W_IN = manifest.slide_size.w
@@ -32,6 +34,130 @@ export function regionStyle(region) {
     width: inToPx(region.w),
     height: inToPx(region.h),
   }
+}
+
+// The token tree (typography.tokens) — the style single source of truth.
+export const TK = manifest.typography.tokens
+
+// ---- role resolution (mirrors render_pptx._role_style / _region_role) ----
+
+// CSS font stack from the manifest's web_fallbacks: the token face first
+// (@fontsource bundles it, so every machine renders the same face), the
+// declared local fallbacks behind it, generic family last. An explicit latin
+// face (only the master's page number carries one) goes in front so latin
+// glyphs use it, like the pptx latin/ea split.
+export function fontStack(face = TK.face, latin) {
+  const fallbacks = manifest.typography.web_fallbacks[face] ?? []
+  const generic = fallbacks.some((f) => f.includes('Serif')) ? 'serif' : 'sans-serif'
+  return [latin ?? face, face, ...fallbacks, generic].filter(Boolean).join(', ')
+}
+
+// A named tokens role -> CSS style: face/size/weight/color all from tokens
+// (latin inherits the token family default like render_pptx._role_style).
+export function roleStyle(roleName) {
+  const role = TK.roles[roleName]
+  return {
+    fontFamily: fontStack(role.face ?? TK.face, role.face ?? TK.latin_face),
+    fontSize: ptToPx(role.size_pt),
+    fontWeight: TK.weights[role.weight] ?? TK.weights.regular,
+    color: role.color,
+  }
+}
+
+// Region -> role name via typography.tokens.role_bindings.
+export function regionRoleName(archetype, region) {
+  return TK.role_bindings[archetype][region]
+}
+
+export function regionRole(archetype, region) {
+  return roleStyle(regionRoleName(archetype, region))
+}
+
+// Title role with the long-title downgrade (over title_long.over_chars in
+// CJK-width units -> 28pt; weight/color unchanged), mirroring
+// render_pptx._title_style.
+export function titleRoleName(text, archetype) {
+  const name = regionRoleName(archetype, 'title')
+  const long = TK.roles.title_long
+  if (name === 'title' && long && textWidth(text) > (long.over_chars ?? Infinity)) {
+    return 'title_long'
+  }
+  return name
+}
+
+export function titleRoleStyle(text, archetype) {
+  return roleStyle(titleRoleName(text, archetype))
+}
+
+// ---- spacing (mirrors render_pptx._styled_paragraph rhythm / _textbox_shape) ----
+
+// Body-flow text carries the rhythm; PowerPoint renders spcPct 150% as the
+// measured line_pitch_em and applies space_before to every paragraph, the
+// first included (inside the box) — the web mirrors both so line pitch and
+// paragraph gaps match the pptx. Ceremonial single-line roles use
+// single_pitch_em (spcPct 100%) instead.
+export function rhythmLineHeight() {
+  return { lineHeight: TK.spacing.line_pitch_em }
+}
+
+export function singleLineHeight() {
+  return { lineHeight: TK.spacing.single_pitch_em }
+}
+
+export function paraBeforePx() {
+  return ptToPx(TK.spacing.space_before_pt)
+}
+
+// Token textbox insets (0.1in sides / 0.05in ends), like every pptx box.
+export function textboxPadding() {
+  const s = TK.spacing
+  return { padding: `${inToPx(s.textbox_inset_v_in)}px ${inToPx(s.textbox_inset_in)}px` }
+}
+
+// ---- emphasis (mirrors render_pptx._split_emphasis) ----
+
+// Split into {text, emph} segments: paired **marker** segments emphasize;
+// markers around empty or unpaired content never match and stay literal.
+export function splitEmphasis(text) {
+  const marker = TK.emphasis?.marker ?? ''
+  if (!marker || typeof text !== 'string' || !text.includes(marker)) {
+    return [{ text, emph: false }]
+  }
+  const pattern = new RegExp(
+    `${marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}(.+?)${marker.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}`,
+    'gs',
+  )
+  const out = []
+  let last = 0
+  for (const m of text.matchAll(pattern)) {
+    if (m.index > last) out.push({ text: text.slice(last, m.index), emph: false })
+    out.push({ text: m[1], emph: true })
+    last = m.index + m[0].length
+  }
+  if (last < text.length) out.push({ text: text.slice(last), emph: false })
+  return out.length ? out : [{ text, emph: false }]
+}
+
+export function emphasisStyle() {
+  const e = TK.emphasis ?? {}
+  return { color: e.color, fontWeight: TK.weights[e.weight] ?? TK.weights.bold }
+}
+
+// ---- caption scrim + hairline ----
+
+// One caption line at single-line pitch plus both v-insets — exactly the
+// pptx strip height (render_pptx._caption_strip_height_in), resolved through
+// the owning archetype's bound caption role like everything else.
+export function captionStripPx(roleName = 'caption') {
+  const role = TK.roles[roleName]
+  return ptToPx(role.size_pt * TK.spacing.single_pitch_em)
+    + 2 * inToPx(TK.spacing.textbox_inset_v_in)
+}
+
+export function rgba(hex, alphaPct) {
+  const h = hex.replace('#', '')
+  const [r, g, b] = [0, 2, 4].map((k) => parseInt(h.slice(k, k + 2), 16))
+  return `rgba(${r}, ${g}, ${b}, ${alphaPct / 100})`
 }
 
 // CJK-aware width in the spirit of validate_deck.text_width (East Asian W/F
@@ -65,22 +191,6 @@ export function textWidth(s) {
   let units = 0
   for (const ch of s) units += isWide(ch) ? 2 : 1
   return units / 2
-}
-
-// Long-title size switch, mirroring render_pptx._title_size_pt.
-export function titleSizePt(text) {
-  const t = manifest.typography.title
-  return textWidth(text) > t.long_title_over_chars ? t.long_title_size_pt : t.size_pt
-}
-
-// CSS font stack from the manifest's web_fallbacks: latin face first (so latin
-// glyphs use it, like the pptx latin/ea split), then the CJK face and its
-// declared fallbacks, then a generic family. Local fonts win; the bundled
-// Noto families (imported in main.jsx) only serve machines without them.
-export function fontStack(face, latin) {
-  const fallbacks = manifest.typography.web_fallbacks[face] ?? []
-  const generic = fallbacks.some((f) => f.includes('Serif')) ? 'serif' : 'sans-serif'
-  return [latin, face, ...fallbacks, generic].filter(Boolean).join(', ')
 }
 
 // ---- deck accessors (blocks arrive in reading order) ----

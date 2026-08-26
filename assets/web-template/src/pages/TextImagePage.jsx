@@ -1,37 +1,18 @@
-import manifest from '../manifest.json'
 import { TitleBar } from '../components/TitleBar'
-import { regionStyle, ptToPx, fontStack, blocksOf, titleOf } from '../lib/layout'
-import { assetUrl } from '../lib/assets'
-
-const T = manifest.typography
-
-// FittedSlot: image contain-fitted into a manifest slot (aspect kept,
-// centered), mirroring render_pptx._add_fitted_picture; an optional caption
-// overlays the slot's internal bottom edge (render_pptx._add_caption).
-function FittedSlot({ slot, block }) {
-  return (
-    <div className="image-slot" style={regionStyle(slot)}>
-      <img src={assetUrl(block.path)} alt={block.caption ?? ''} draggable={false} />
-      {block.caption && (
-        <div
-          className="image-caption"
-          style={{
-            fontFamily: fontStack(T.caption.face),
-            fontSize: ptToPx(T.caption.size_pt),
-          }}
-        >
-          {block.caption}
-        </div>
-      )}
-    </div>
-  )
-}
+import { FittedImage } from '../components/FittedImage'
+import { EmphasisText } from '../components/EmphasisText'
+import {
+  regionStyle, textboxPadding, singleLineHeight, rhythmLineHeight,
+  paraBeforePx, regionRole, regionRoleName, blocksOf, titleOf,
+} from '../lib/layout'
 
 // text-image: subhead + text/list band + 1-4 images in the manifest slots.
 // Text blocks are always visible; list items ("- " prefixed, like the pptx
-// text box) reveal one step at a time.
+// text box) reveal one step at a time. role_bindings map text and text_column
+// to the secondary role; the band flows with the rhythm and the emphasis
+// convention.
 export function TextImagePage({ page, arch, revealed }) {
-  const body = T.body
+  const archetype = page.archetype
   const subheadBlock = page.blocks.find((b) => b.type === 'subhead')
   const slots = arch.regions.image_slots
   const images = blocksOf(page, 'image')
@@ -55,39 +36,47 @@ export function TextImagePage({ page, arch, revealed }) {
 
   return (
     <>
-      <TitleBar text={titleOf(page)} arch={arch} />
+      <TitleBar text={titleOf(page)} arch={arch} archetype={archetype} />
       {subheadBlock && (
         <div
           className="region-text subhead"
+          data-role={regionRoleName(archetype, 'subhead')}
           style={{
             ...regionStyle(arch.regions.subhead),
-            fontFamily: fontStack(body.face),
-            fontSize: ptToPx(T.subhead_size_pt),
+            ...textboxPadding(),
+            ...singleLineHeight(),
+            ...regionRole(archetype, 'subhead'),
           }}
         >
-          {subheadBlock.text}
+          <span>{subheadBlock.text}</span>
         </div>
       )}
       {paragraphs.length > 0 && (
         <div
           className="region-text"
+          data-role={regionRoleName(archetype, single ? 'text_column' : 'text')}
+          data-rhythm="1"
           style={{
             ...regionStyle(single ? arch.regions.text_column : arch.regions.text),
-            fontFamily: fontStack(body.face),
-            fontSize: ptToPx(body.secondary_size_pt),
+            ...textboxPadding(),
+            ...rhythmLineHeight(),
+            ...regionRole(archetype, single ? 'text_column' : 'text'),
           }}
         >
           {paragraphs.map((p, i) => (
-            <p key={i} className={p.visible ? 'is-visible' : 'is-hidden'}>
-              {p.text}
+            <p key={i} className={p.visible ? 'is-visible' : 'is-hidden'}
+               style={{ marginTop: paraBeforePx() }}>
+              <EmphasisText text={p.text} />
             </p>
           ))}
         </div>
       )}
       {single ? (
-        <FittedSlot slot={arch.regions.image_primary} block={images[0]} />
+        <FittedImage slot={arch.regions.image_primary} block={images[0]} archetype={archetype} />
       ) : (
-        images.map((block, i) => <FittedSlot key={i} slot={slots[i]} block={block} />)
+        images.map((block, i) => (
+          <FittedImage key={i} slot={slots[i]} block={block} archetype={archetype} />
+        ))
       )}
     </>
   )

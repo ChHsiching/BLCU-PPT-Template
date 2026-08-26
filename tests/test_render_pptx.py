@@ -340,6 +340,21 @@ def test_latex_to_omml_produces_native_math():
     assert omml.findall(f".//{{{NS_M}}}r")
 
 
+@requires_math
+def test_norm_bars_keep_their_operands_through_the_chain():
+    # MML2OMML.XSL reads adjacent ‖…‖ pairs as one delimiter run and drops
+    # the enclosed operands (‖u‖ ‖v‖ rendered as empty bars), and drops
+    # <mspace> outright (gluing the two groups together); the chain
+    # normalizes bare \lVert/\rVert to \left/\right and \, to ~ so both the
+    # operands and the separating space survive. Found comparing web vs
+    # pptx renders side by side (#19 verification).
+    latex = r"\frac{u^{\top} v}{\lVert u \rVert \, \lVert v \rVert}"
+    omml = rp.convert_latex_to_omml(latex)
+    texts = [t.text or "" for t in omml.iter(f"{{{NS_M}}}t")]
+    assert texts.count("u") == 2 and texts.count("v") == 2  # numerator + denominator
+    assert "\xa0" in texts  # the thin space survives as a real space run
+
+
 def test_formula_fallback_renders_images(tmp_path, monkeypatch):
     monkeypatch.setattr(rp, "convert_latex_to_omml", lambda latex, xsl_path=None: None)
     deck = load("deck_pptx.json")

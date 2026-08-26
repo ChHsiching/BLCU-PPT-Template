@@ -17,6 +17,14 @@ Checks, each a finding on failure:
   formulas every formula block is rendered by KaTeX (.formula .katex present,
            zero .katex-error elements)
   images   every image block rendered an <img> that actually loaded
+  styles   the typography.tokens role system at computed-style level: every
+           [data-role] element's font-family/weight/color/size against its
+           tokens role, rhythm elements' line pitch + 12pt paragraph space
+           (single-line roles at the single pitch), the caption scrim, the
+           emphasis run count/style (paired ** markers over body-flow blocks)
+           and the hairline on white-backgrounded images
+  fonts    Noto Sans SC actually served (document.fonts reports loaded faces
+           for both weights after fonts.ready)
   brand    the master brand layer per manifest.brand_layer: band/logo counts,
            band geometry + color against the measured regions, every logo
            asset loaded, the right page number (none on cover/closing), plus
@@ -239,6 +247,7 @@ def check_web(base_url: str, deck: dict, screenshots: Path | None,
                     ))
 
                 findings.extend(_check_page_dom(page, pages[i - 1], i))
+                findings.extend(_check_page_styles(page, pages[i - 1], manifest, i))
 
                 # brand-layer checks need the entrance animation settled
                 # (it translates the whole slide for 0.35s after a page change)
@@ -250,6 +259,8 @@ def check_web(base_url: str, deck: dict, screenshots: Path | None,
 
                 if screenshots is not None:
                     page.screenshot(path=str(screenshots / f"page-{i:02d}.png"))
+
+            findings.extend(_check_fonts(page))
         finally:
             browser.close()
 
@@ -323,6 +334,263 @@ def _check_page_dom(page, deck_page: dict, i: int) -> list:
             f"page {i}", "web.image_broken",
             f"image did not load: {src}",
         ))
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# style layer (#19): typography.tokens at computed-style level — the web
+# counterpart of the pptx run-level style facts test_render_pptx asserts
+# ---------------------------------------------------------------------------
+
+STYLE_TOL_PX = 0.75  # computed px carry browser rounding (26.667 -> 26.67)
+PT_TO_PX = 96 / 72  # the stage's 96dpi inch, same as src/lib/layout.js
+
+
+def _css_px(value: str) -> float | None:
+    m = re.match(r"([\d.]+)px", value or "")
+    return float(m.group(1)) if m else None
+
+
+def _css_rgb(value: str) -> tuple | None:
+    got = [int(c) for c in re.findall(r"\d+", value or "")]
+    return tuple(got[:3]) if len(got) >= 3 else None
+
+
+def _hex_rgb(color: str) -> tuple:
+    c = color.lstrip("#")
+    return tuple(int(c[k:k + 2], 16) for k in (0, 2, 4))
+
+
+def _expected_title_role(tokens: dict, deck_page: dict, text: str | None) -> str | None:
+    """Independently resolve the title element's role: role_bindings, then the
+    long-title downgrade over title_long.over_chars (CJK width)."""
+    archetype = deck_page.get("archetype", "")
+    bindings = tokens.get("role_bindings", {}).get(archetype, {})
+    name = bindings.get("label") if archetype == "agenda" else bindings.get("title")
+    long = tokens.get("roles", {}).get("title_long", {})
+    if name == "title" and text is not None and \
+            vd.text_width(text) > long.get("over_chars", float("inf")):
+        name = "title_long"
+    return name
+
+
+def _body_flow_texts(deck_page: dict) -> list[str]:
+    """Texts rendering as body flow — exactly the blocks the pptx renderer
+    passes emphasis=True. Cover/closing subtitles, subheads and captions keep
+    ** markers literal, so they contribute no expected emphasis runs."""
+    archetype = deck_page.get("archetype", "")
+    out: list[str] = []
+    if archetype in ("text-formula", "text-image", "chart-focus"):
+        out += [b.get("text", "") for b in deck_page["blocks"] if b.get("type") == "text"]
+    if archetype in ("agenda", "text-image"):
+        out += [item for b in deck_page["blocks"] if b.get("type") == "list"
+                for item in b.get("items", [])]
+    return out
+
+
+def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> list:
+    findings: list[vd.Finding] = []
+    if manifest is None:
+        return findings
+    tokens = manifest.get("typography", {}).get("tokens")
+    if not tokens:
+        findings.append(vd.Finding(
+            f"page {i}", "web.style_missing",
+            "manifest has no typography.tokens; the style layer cannot be "
+            "checked or rendered",
+        ))
+        return findings
+    roles = tokens.get("roles", {})
+    weights = tokens.get("weights", {})
+    spacing = tokens.get("spacing", {})
+    weights_by_name = {v: k for k, v in weights.items()}
+
+    state = page.evaluate(
+        """() => {
+          const slide = document.querySelector('.slide')
+          const px = v => parseFloat(v) || 0
+          const textTop = el => {
+            // element-rect based: Range rects over anonymous flex text are
+            // unreliable in Chrome; every measured box carries its text in a
+            // real child element (span for single-line roles, p/div for flow)
+            const first = el.firstElementChild
+            return first
+              ? first.getBoundingClientRect().top - el.getBoundingClientRect().top
+              : null
+          }
+          const roleEls = [...slide.querySelectorAll('[data-role]')].map(el => {
+            const cs = getComputedStyle(el)
+            return {
+              role: el.dataset.role, rhythm: el.dataset.rhythm === '1',
+              family: cs.fontFamily, size: px(cs.fontSize),
+              weight: cs.fontWeight, color: cs.color, lineHeight: cs.lineHeight,
+              paraTop: el.dataset.rhythm === '1' && el.firstElementChild
+                ? getComputedStyle(el.firstElementChild).marginTop : null,
+              captionBg: el.dataset.role === 'caption' ? cs.backgroundColor : null,
+              // vertical placement of the first text line inside the box —
+              // guards the top-anchor model (v-inset, +12pt for body flow)
+              textTop: ['subhead', 'caption'].includes(el.dataset.role)
+                         || el.dataset.rhythm === '1' ? textTop(el) : null,
+            }
+          })
+          const emph = [...slide.querySelectorAll('.emph')].map(el => ({
+            color: getComputedStyle(el).color,
+            weight: getComputedStyle(el).fontWeight,
+            text: el.textContent,
+          }))
+          // the white-background hairline detector duplicated from
+          // src/lib/hairline.js: the gate must verify the renderer applied
+          // the outline, not take the renderer's word for it
+          const hairlineImgs = [...slide.querySelectorAll('.image-fit img')].map(img => {
+            let white = false
+            try {
+              const c = document.createElement('canvas')
+              c.width = img.naturalWidth; c.height = img.naturalHeight
+              const ctx = c.getContext('2d', { willReadFrequently: true })
+              ctx.drawImage(img, 0, 0)
+              const { width: w, height: h } = c
+              const pts = [[0,0],[w-1,0],[0,h-1],[w-1,h-1],
+                           [w>>1,0],[w>>1,h-1],[0,h>>1],[w-1,h>>1]]
+              white = pts.every(([x,y]) => {
+                const d = ctx.getImageData(x,y,1,1).data
+                return Math.min(d[0], d[1], d[2]) >= 245
+              })
+            } catch { white = false }
+            const cs = getComputedStyle(img)
+            return { white, loaded: img.complete && img.naturalWidth > 0,
+                     src: img.getAttribute('src'),
+                     width: cs.outlineWidth, style: cs.outlineStyle,
+                     color: cs.outlineColor }
+          })
+          const titleEl = slide.querySelector('.cover-title, .agenda-label, .title-bar')
+          return { roleEls, emph, hairlineImgs,
+                   titleRole: titleEl ? titleEl.dataset.role : null }
+        }""")
+
+    def style_finding(what, got, want):
+        findings.append(vd.Finding(
+            f"page {i}", "web.style",
+            f"{what}: rendered {got!r}, tokens expect {want!r}",
+        ))
+
+    # the title element's role is re-resolved independently (bindings + the
+    # long-title downgrade), so a mislabeled data-role cannot hide a defect
+    expected_title = _expected_title_role(tokens, deck_page, _deck_title(deck_page))
+    if expected_title is None:
+        findings.append(vd.Finding(
+            f"page {i}", "web.style",
+            f"archetype {deck_page.get('archetype')!r} has no title role binding",
+        ))
+    elif state["titleRole"] != expected_title:
+        style_finding("title data-role", state["titleRole"], expected_title)
+
+    for el in state["roleEls"]:
+        role = roles.get(el["role"])
+        if role is None:
+            findings.append(vd.Finding(
+                f"page {i}", "web.style",
+                f"element carries data-role={el['role']!r}, not a tokens role",
+            ))
+            continue
+        where = f"[{el['role']}]"
+        family_first = el["family"].split(",")[0].strip().strip('"')
+        if family_first != tokens.get("face"):
+            style_finding(f"{where} font-family", el["family"], tokens.get("face"))
+        if abs(el["size"] - PT_TO_PX * role["size_pt"]) > STYLE_TOL_PX:
+            style_finding(f"{where} font-size", f"{el['size']}px", f"{role['size_pt']}pt")
+        if weights_by_name.get(int(el["weight"])) != role["weight"]:
+            style_finding(f"{where} font-weight", el["weight"], role["weight"])
+        if _css_rgb(el["color"]) != _hex_rgb(role["color"]):
+            style_finding(f"{where} color", el["color"], role["color"])
+        pitch = spacing.get("line_pitch_em" if el["rhythm"] else "single_pitch_em")
+        line_height = _css_px(el["lineHeight"])
+        if pitch and (line_height is None or
+                      abs(line_height - el["size"] * pitch) > 1.0):
+            style_finding(f"{where} line-height", el["lineHeight"],
+                          f"{el['size'] * pitch:.1f}px ({pitch}em)")
+        if el["rhythm"]:
+            before = _css_px(el["paraTop"])
+            if before is None or abs(before - PT_TO_PX * spacing["space_before_pt"]) > 0.5:
+                style_finding(f"{where} paragraph space-before", el["paraTop"],
+                              f"{spacing['space_before_pt']}pt")
+        # vertical placement: the first text line sits at the v-inset
+        # (top-anchored boxes), plus the 12pt paragraph space in body flow.
+        # getBoundingClientRect scales with the stage transform, so this is
+        # only valid unscaled because VIEWPORT equals the 1280x720 stage
+        # (scale === 1); a different VIEWPORT needs a stage-size division
+        # here like the brand checks' stageH normalization.
+        if el["textTop"] is not None:
+            inset_px = 1280 / manifest["slide_size"]["w"] * spacing["textbox_inset_v_in"]
+            want = inset_px + (PT_TO_PX * spacing["space_before_pt"] if el["rhythm"] else 0)
+            if abs(el["textTop"] - want) > 1.5:
+                style_finding(f"{where} first-line offset", f"{el['textTop']:.1f}px",
+                              f"{want:.1f}px")
+        if el["role"] == "caption":
+            scrim = role.get("scrim", {})
+            nums = [float(c) for c in re.findall(r"[\d.]+", el["captionBg"] or "")]
+            want_rgb = _hex_rgb(scrim.get("color", "#000000"))
+            want_alpha = scrim.get("alpha_pct", 0) / 100
+            if len(nums) < 4 or tuple(int(n) for n in nums[:3]) != want_rgb or \
+                    abs(nums[3] - want_alpha) > 0.01:
+                style_finding("caption scrim", el["captionBg"],
+                              f"rgba{want_rgb + (want_alpha,)}")
+
+    # emphasis: paired markers over body-flow blocks -> green bold runs
+    emph_cfg = tokens.get("emphasis", {})
+    marker = re.escape(emph_cfg.get("marker", "**"))
+    expected_runs = sum(
+        len(re.findall(rf"{marker}(.+?){marker}", t, re.S))
+        for t in _body_flow_texts(deck_page))
+    if len(state["emph"]) != expected_runs:
+        findings.append(vd.Finding(
+            f"page {i}", "web.style",
+            f"{expected_runs} emphasized keyword(s) expected in body flow, "
+            f"{len(state['emph'])} .emph element(s) rendered",
+        ))
+    for run in state["emph"]:
+        if _css_rgb(run["color"]) != _hex_rgb(emph_cfg.get("color", "#548235")) or \
+                weights_by_name.get(int(run["weight"])) != emph_cfg.get("weight"):
+            style_finding(f"emphasis run {run['text']!r}",
+                          f"{run['color']} {run['weight']}",
+                          f"{emph_cfg.get('color')} {emph_cfg.get('weight')}")
+
+    # hairline: white-backgrounded images carry the token outline
+    hair = tokens.get("image", {}).get("hairline")
+    if hair:
+        want_w, want_c = PT_TO_PX * hair["width_pt"], _hex_rgb(hair["color"])
+        for img in state["hairlineImgs"]:
+            if not img["loaded"] or not img["white"]:
+                continue
+            if img["style"] != "solid" or \
+                    abs(_css_px(img["width"]) - want_w) > STYLE_TOL_PX or \
+                    _css_rgb(img["color"]) != want_c:
+                style_finding(f"hairline on {img['src']}",
+                              f"{img['style']} {img['width']} {img['color']}",
+                              f"solid {want_w}px rgb{want_c}")
+    return findings
+
+
+def _check_fonts(page) -> list:
+    """The bundled faces actually served: after fonts.ready, both Noto Sans SC
+    weights report loaded (woff2 subsets load on demand via unicode-range, so
+    'loaded' means the deck's glyphs pulled them)."""
+    try:
+        loaded = page.evaluate(
+            """async () => {
+              await document.fonts.ready
+              return [...document.fonts].filter(f => f.status === 'loaded')
+                .map(f => `${f.family.replace(/"/g, '')} ${f.weight}`)
+            }""")
+    except Exception as exc:
+        return [vd.Finding("fonts", "web.fonts", f"document.fonts probe failed: {exc}")]
+    findings = []
+    for weight in (400, 700):
+        if f"Noto Sans SC {weight}" not in loaded:
+            findings.append(vd.Finding(
+                "fonts", "web.fonts",
+                f"Noto Sans SC {weight} did not load (loaded faces: "
+                f"{sorted(set(loaded))})",
+            ))
     return findings
 
 

@@ -13,45 +13,6 @@
     "note": "文本类 region 底边不得越过 content_bottom_y（给页码区留位）。page_number 占位符与图片为例外：图片只受画布 13.33×7.5 约束，且避开页码框矩形（x 11.96–12.59 且 y 6.82–7.5）"
   },
   "typography": {
-    "title": {
-      "face": "华文中宋",
-      "latin": "Times New Roman",
-      "size_pt": 44,
-      "long_title_size_pt": 28,
-      "long_title_over_chars": 15
-    },
-    "cover_subtitle": {
-      "face": "华文中宋",
-      "latin": "Times New Roman",
-      "size_pt": 24
-    },
-    "body": {
-      "face": "黑体",
-      "size_pt": 20,
-      "secondary_size_pt": 18
-    },
-    "accent": {
-      "face": "黑体",
-      "size_pt": 20,
-      "note": "原模板 slide3 用楷体做定义段；统一为黑体消除页间字体跳变"
-    },
-    "subhead_size_pt": 28,
-    "agenda_label": {
-      "face": "黑体",
-      "size_pt": 48
-    },
-    "agenda_list": {
-      "face": "黑体",
-      "size_pt": 24
-    },
-    "caption": {
-      "face": "Calibri",
-      "size_pt": 10
-    },
-    "formula": {
-      "face": "Cambria Math",
-      "size_pt": 20
-    },
     "page_number": {
       "face": "华文中宋",
       "latin": "Times New Roman",
@@ -76,7 +37,7 @@
       ]
     },
     "tokens": {
-      "note": "S2（#16）新增：内容形式样式系统的完整 token，样式唯一真相源。additive 落位——S3(#18)/S4(#19) 渲染器切换到本树后，上方旧字段（title/cover_subtitle/body/accent/subhead_size_pt/agenda_label/agenda_list/caption）删除；web_fallbacks 保留（新旧字面共用）。",
+      "note": "内容形式样式系统的完整 token，样式唯一真相源。S2（#16）落地为 additive；S3（#18）/S4（#19）双渲染器切换完成后，上方旧数值字段（title/body/agenda_label/caption 等）已删除，仅存 page_number（母版自带）与 web_fallbacks（新旧字面共用，现仅页码字面需要）。",
       "face": "Noto Sans SC",
       "latin_face": "Noto Sans SC",
       "face_note": "全域唯一字族（思源黑体同源），ea/latin 同面——思源自带 latin 字形，不再另配 Calibri/Times。层级只靠字重 + 颜色表达，不新增字号差。",
@@ -188,11 +149,13 @@
       },
       "spacing": {
         "line_spacing": 1.5,
+        "line_pitch_em": 1.779,
+        "single_pitch_em": 1.2,
         "space_before_pt": 12,
         "left_axis_in": 0.74,
         "textbox_inset_in": 0.1,
         "textbox_inset_v_in": 0.05,
-        "note": "正文行距 1.5、段前 12pt 全页型统一；内容框左轴对齐 0.74；文本框内边距左右各 0.1in、上下各 0.05in"
+        "note": "正文行距 1.5（PowerPoint spcPct）、段前 12pt（首段亦计，PowerPoint 在框内渲染首段 spcBef）全页型统一；内容框左轴对齐 0.74；文本框内边距左右各 0.1in、上下各 0.05in。line_pitch_em/single_pitch_em 为 COM 实测换算常量（scripts/measure_line_pitch.py：spcPct 100% = 1.2em、150% = 1.779em）：renderer-pptx 原生走 spcPct，renderer-web 无 spcPct 语义、以两值作 CSS line-height（CSS 行盒 = em×字号，恰等于 PowerPoint 行音高）"
       },
       "colors": {
         "accent": "#548235",

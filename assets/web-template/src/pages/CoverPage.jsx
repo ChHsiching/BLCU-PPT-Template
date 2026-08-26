@@ -1,31 +1,25 @@
-import manifest from '../manifest.json'
 import {
-  regionStyle,
-  ptToPx,
-  fontStack,
-  titleSizePt,
-  titleOf,
-  textsOf,
+  regionStyle, textboxPadding, singleLineHeight, titleRoleName,
+  titleRoleStyle, regionRole, regionRoleName, titleOf, textsOf,
 } from '../lib/layout'
-
-const T = manifest.typography
 
 // cover + closing share one layout (closing is a content variant of cover in
 // the manifest): centered title in the upper band, joined presenter line in
-// the lower band.
+// the lower band. Roles resolve through role_bindings (cover/closing both
+// bind title -> title with the long downgrade, subtitle -> cover_subtitle).
 export function CoverPage({ page, arch }) {
   const title = titleOf(page)
   const subtitle = textsOf(page).join(' ')
-  const t = T.title
-  const sub = T.cover_subtitle
   return (
     <>
       <div
         className="region-text cover-title"
+        data-role={titleRoleName(title, page.archetype)}
         style={{
           ...regionStyle(arch.regions.title),
-          fontFamily: fontStack(t.face, t.latin),
-          fontSize: ptToPx(titleSizePt(title)),
+          ...textboxPadding(),
+          ...singleLineHeight(),
+          ...titleRoleStyle(title, page.archetype),
         }}
       >
         {title}
@@ -33,10 +27,12 @@ export function CoverPage({ page, arch }) {
       {subtitle && (
         <div
           className="region-text cover-subtitle"
+          data-role={regionRoleName(page.archetype, 'subtitle')}
           style={{
             ...regionStyle(arch.regions.subtitle),
-            fontFamily: fontStack(sub.face, sub.latin),
-            fontSize: ptToPx(sub.size_pt),
+            ...textboxPadding(),
+            ...singleLineHeight(),
+            ...regionRole(page.archetype, 'subtitle'),
           }}
         >
           {subtitle}

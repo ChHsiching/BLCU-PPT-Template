@@ -46,26 +46,16 @@ body {
   inset: 0;
 }
 
-/* text regions: inner padding mirrors the pptx boxes' lIns/tIns (0.1in/0.05in) */
+/* text regions: font/padding/line-height all arrive inline from the
+   typography.tokens role system (src/lib/layout.js) — this sheet carries
+   structure only, never style numbers */
 .region-text {
-  padding: 4.7px 9.4px;
-  line-height: 1.5;
   overflow: hidden;
-}
-
-.region-text p {
-  margin-bottom: 0.5em;
-}
-
-.region-text p:last-child {
-  margin-bottom: 0;
 }
 
 .title-bar {
   display: flex;
   align-items: center;
-  padding: 0 9.4px;
-  line-height: 1.25;
   overflow: hidden;
 }
 
@@ -75,7 +65,6 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  line-height: 1.3;
 }
 
 .cover-subtitle {
@@ -91,28 +80,18 @@ body {
   align-items: center;
   justify-content: center;
   text-align: center;
-  letter-spacing: 0.08em;
-}
-
-.agenda-list {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-evenly;
-  line-height: 1.4;
 }
 
 .agenda-item.is-visible {
   animation: item-in 0.25s ease-out;
 }
 
-/* formulas: centered stack in the formula region */
+/* formulas: centered stack in the formula region; size/gap/padding inline */
 .formula-area {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
-  gap: 1em;
-  padding: 9.4px;
   overflow: hidden;
 }
 
@@ -127,9 +106,11 @@ body {
 }
 
 /* text-image */
+/* top-anchored like the pptx SubheadArea (render_pptx._textbox_shape
+   anchor="t"): the line sits at the v-inset, not centered in the region */
 .subhead {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   white-space: nowrap;
 }
 
@@ -145,6 +126,8 @@ p.is-visible {
   animation: item-in 0.25s ease-out;
 }
 
+/* fitted image: the shrink-wrapping box mirrors the pptx contain-fit (explicit
+   px once measured); the caption scrim hugs it, not the slot */
 .image-slot {
   display: flex;
   align-items: center;
@@ -152,20 +135,29 @@ p.is-visible {
   overflow: hidden;
 }
 
-.image-slot img {
+.image-fit {
+  position: relative;
   max-width: 100%;
   max-height: 100%;
-  object-fit: contain;
 }
 
+.image-fit img {
+  display: block;
+  max-width: 100%;
+  max-height: 100%;
+}
+
+/* the strip is one caption line by design (manifest budget note); a caption
+   too long for a narrow fitted image keeps its first line fully visible */
 .image-caption {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(255, 255, 255, 0.85);
-  text-align: center;
-  line-height: 1.3;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow: hidden;
 }
 
 /* master brand layer (#17): measured bands/logos from manifest.brand_layer,
@@ -235,7 +227,7 @@ p.is-visible {
   align-items: center;
   gap: 8px;
   color: #ddd;
-  font: 14px/1 "SimHei", "Noto Sans SC", sans-serif;
+  font: 14px/1 "Noto Sans SC", sans-serif;
 }
 
 .controls button {

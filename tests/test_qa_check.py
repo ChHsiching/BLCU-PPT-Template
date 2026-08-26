@@ -305,6 +305,35 @@ def test_web_qa_green_then_defect_then_export(tmp_path):
     assert proc.returncode == 1
     assert "web.brand_asset_broken" in proc.stdout
 
+    # defect phase 3: a hard-coded style override bypassing the tokens must
+    # fail the style gate (title weight + emphasis color)
+    shutil.copyfile(REPO / "assets" / "web-template" / "public" / "brand" / "image7.png",
+                    web / "public" / "brand" / "image7.png")
+    override = ('\n[data-role="title"] { font-weight: 400 !important; }\n'
+                '\n.emph { color: #ff0000 !important; }\n')
+    css = web / "src" / "styles.css"
+    css.write_text(css.read_text(encoding="utf-8") + override, encoding="utf-8")
+    proc = subprocess.run(
+        [sys.executable, str(QA_WEB_SCRIPT), str(web)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=300,
+    )
+    assert proc.returncode == 1
+    assert "web.style" in proc.stdout
+    css.write_text(css.read_text(encoding="utf-8").replace(override, ""),
+                   encoding="utf-8")
+
+    # a white-background screenshot carries the token hairline and stays
+    # green: renderer detection, outline and gate all exercised on it
+    shutil.copyfile(FIXTURE_DIR / "material" / "images" / "white-chart.png",
+                    web / "public" / "material" / "images" / "main-results-bar.png")
+    proc = subprocess.run(
+        [sys.executable, str(QA_WEB_SCRIPT), str(web)],
+        capture_output=True, text=True, encoding="utf-8", errors="replace",
+        timeout=300,
+    )
+    assert proc.returncode == 0, proc.stdout + proc.stderr
+
 
 def test_web_qa_exit_2_without_node_modules(tmp_path):
     web = tmp_path / "bare"
