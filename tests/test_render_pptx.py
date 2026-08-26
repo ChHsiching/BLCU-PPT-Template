@@ -226,7 +226,7 @@ def test_render_pipeline(tmp_path):
                  for rPr in r.findall(f"{{{NS_A}}}rPr")]
     assert math_rprs
     for rPr in math_rprs:
-        assert rPr.get("sz") == "2200"
+        assert rPr.get("sz") == "2000"
         latin = rPr.find(f"{{{NS_A}}}latin")
         assert latin is not None and latin.get("typeface") == "Cambria Math"
     # content boxes: exactly formula area + text area, at manifest regions
@@ -235,7 +235,7 @@ def test_render_pipeline(tmp_path):
     formula_box, text_box = sorted(boxes, key=lambda sp: sp.top)
     assert_region(formula_box, arch["text-formula"]["regions"]["formula"])
     assert_region(text_box, arch["text-formula"]["regions"]["text"])
-    assert run_font(text_box) == (20, "楷体", "楷体")
+    assert run_font(text_box) == (20, "黑体", "黑体")
     assert text_box.text_frame.text == deck["pages"][1]["blocks"][3]["text"]
 
     # -- slide 3: pure-text variant uses the full-height region, 黑体

@@ -232,7 +232,10 @@ def _text_paragraph(text: str, *, size_pt: int, latin: str, ea: str,
 
 _MATH_PARA_SHELL = (
     f'<a:p xmlns:a="{NS_A}" xmlns:mc="{NS_MC}" xmlns:a14="{NS_A14}" xmlns:m="{NS_M}">'
-    '<a:pPr><a:lnSpc><a:spcPct val="100000"/></a:lnSpc><a:buNone/></a:pPr>'
+    # 公式段统一节奏：居中对齐页面中轴、130% 行距、段前 16pt——
+    # 消除宽度不等的公式左缘参差与垂直间距忽紧忽松
+    '<a:pPr algn="ctr"><a:lnSpc><a:spcPct val="130000"/></a:lnSpc>'
+    '<a:spcBef><a:spcPts val="1600"/></a:spcBef><a:buNone/></a:pPr>'
     "<mc:AlternateContent>"
     '<mc:Choice Requires="a14"><a14:m><m:oMathPara>'
     '<m:oMathParaPr><m:jc m:val="centerGroup"/></m:oMathParaPr>'

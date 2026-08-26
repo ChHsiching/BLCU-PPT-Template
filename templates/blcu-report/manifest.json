@@ -31,8 +31,9 @@
       "secondary_size_pt": 18
     },
     "accent": {
-      "face": "楷体",
-      "size_pt": 20
+      "face": "黑体",
+      "size_pt": 20,
+      "note": "原模板 slide3 用楷体做定义段；统一为黑体消除页间字体跳变"
     },
     "subhead_size_pt": 28,
     "agenda_label": {
@@ -49,7 +50,7 @@
     },
     "formula": {
       "face": "Cambria Math",
-      "size_pt": 22
+      "size_pt": 20
     },
     "page_number": {
       "face": "华文中宋",
@@ -188,7 +189,7 @@
         "slide": 3,
         "layout": "标题和内容"
       },
-      "evidence": "slide 3（公式区 Rectangle 2 + 楷体文字区 文本框 3，实测单块 117 字；文字区高度由实测 1.78in 下延至 2.2in——原页该区下方为留白，底边 6.52 仍在安全线内）；公式密集变体见 slide 12/13；text_full 取自 slide 11 实测全高文字框（x 由实测 0.35 归一到标题列 0.74）；text_blocks_max 8 依据 slide 11 的 14 短段落实证（一段一要点），150% 行距+段前 12pt 为 slide 21 实测",
+      "evidence": "slide 3（公式区 Rectangle 2 + 楷体文字区 文本框 3，实测单块 117 字；文字区高度由实测 1.78in 下延至 2.2in——原页该区下方为留白，底边 6.52 仍在安全线内）；公式密集变体见 slide 12/13；text_full 取自 slide 11 实测全高文字框（x 由实测 0.35 归一到标题列 0.74）；text_blocks_max 8 依据 slide 11 的 14 短段落实证（一段一要点），150% 行距+段前 12pt 为 slide 21 实测；公式区/文字区对齐标题栅格(0.74,11.86)为设计修正——模板原框(2.37,10.38)中心轴偏离页面中轴 0.9in 导致公式错位观感",
       "regions": {
         "title": {
           "x": 0.74,
@@ -197,16 +198,16 @@
           "h": 1.11
         },
         "formula": {
-          "x": 2.37,
-          "y": 1.5,
-          "w": 10.38,
-          "h": 3.47
+          "x": 0.74,
+          "y": 1.4,
+          "w": 11.86,
+          "h": 3.0
         },
         "text": {
-          "x": 1.11,
-          "y": 4.32,
-          "w": 10.96,
-          "h": 2.2
+          "x": 0.74,
+          "y": 4.55,
+          "w": 11.86,
+          "h": 2.0
         },
         "text_full": {
           "x": 0.74,
@@ -224,8 +225,8 @@
       "budget": {
         "title_max_chars": 25,
         "text_blocks_max": 8,
-        "text_block_max_chars": 207,
-        "text_total_max_chars": 207,
+        "text_block_max_chars": 203,
+        "text_total_max_chars": 203,
         "subhead_max_chars": 0,
         "list_items_max": 0,
         "list_item_max_chars": 0,
