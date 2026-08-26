@@ -26,7 +26,7 @@ _Avoid_: 大纲文件（那是 outline.md）、中间格式
 CP1 之前产出的规划文档：页面序列、每页页型与要点、容量预算分配、配图分配。经用户确认后固化为 deck.json。
 _Avoid_: 计划书、目录
 
-**演讲稿（script.md）**:
+**演讲稿（演讲稿.md）**:
 独立交付的口头讲稿文档，与 PPTX/Web 产物并列。永不写入 pptx 的演讲者备注。
 _Avoid_: 备注、notes、旁白
 
@@ -37,11 +37,11 @@ _Avoid_: 备注、notes、旁白
 _Avoid_: 确认点、审批
 
 **门（Gate / O1、G1-G3）**:
-一道以零缺陷为通过标准的完成判据（机器检查或 fresh subagent 审查）。不过门不推进；fail loop 要求修复全部缺陷后整门重跑，禁止抽查修补项。门不是建议。
+一道以零缺陷为通过标准的完成判据（机器检查、内联自查或 fresh subagent 审查）。不过门不推进；fail loop 要求修复全部缺陷后整门重跑，禁止抽查修补项。门不是建议。
 _Avoid_: 检查步骤、review
 
 **AI 味门（AI-flavor gate）**:
-对文本内容的 AI 腔审查：优先调用已安装的 no-ai-slop skill，缺失时降级到本仓库 `references/ai-slop-patterns.md` 内联清单。发现以具名 pattern + 原文引证呈现。
+对文本内容的 AI 腔审查：优先调用已安装的 no-ai-slop skill，缺失或无法调用时降级到本仓库 `references/ai-slop-patterns.md` 内联清单。发现以具名 pattern + 原文引证 + 一句修法呈现。
 _Avoid_: 文风检查
 
 **容量预算（Budget）**:
