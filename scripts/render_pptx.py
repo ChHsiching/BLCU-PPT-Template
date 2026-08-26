@@ -50,6 +50,7 @@ from pptx.parts.slide import SlidePart
 from pptx.util import Inches
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
+import embed_fonts as efont  # noqa: E402
 import validate_deck as vd  # noqa: E402
 
 SUPPORTED_ARCHETYPES = (
@@ -659,6 +660,10 @@ class RenderStats:
     pages: int = 0
     formulas_native: int = 0
     formulas_fallback: int = 0
+    # fonts.embed payload from embed_fonts (None when not requested/degraded)
+    fonts_embedded: dict | None = None
+    # degrade reason when embedding was requested but skipped
+    font_warning: str | None = None
 
 
 @dataclass
@@ -715,6 +720,20 @@ def render_deck(deck: dict, manifest: dict, template_pptx: Path,
         stats.pages += 1
 
     _delete_leading_slides(prs, original_count)
+
+    # font embedding (manifest fonts.embed; degrade with warning, never fail)
+    embed_cfg = manifest.get("fonts", {}).get("embed")
+    if embed_cfg:
+        base = Path(template_pptx).parent
+        try:
+            stats.fonts_embedded = efont.embed_fonts(
+                prs, face=embed_cfg["face"],
+                weights={name: base / embed_cfg[name]
+                         for name in efont.WEIGHT_ELEMENTS if name in embed_cfg},
+                characters=efont.collect_deck_characters(deck),
+                warn=lambda msg: setattr(stats, "font_warning", msg))
+        except Exception as exc:  # embedding is an enhancement, never fatal
+            stats.font_warning = f"font embedding failed: {exc!r}"
     return RenderResult(prs, stats)
 
 
@@ -790,6 +809,13 @@ def main(argv=None) -> int:
     s = result.stats
     print(f"rendered {s.pages} page(s) -> {args.out} "
           f"({s.formulas_native} native formula(s), {s.formulas_fallback} image fallback(s))")
+    if s.fonts_embedded:
+        fe = s.fonts_embedded
+        parts = ", ".join(f"{name} {fe['weights'][name] // 1024}KB"
+                          for name in efont.WEIGHT_ELEMENTS if name in fe["weights"])
+        print(f"embedded {fe['face']} subset ({fe['chars']} chars): {parts}")
+    elif s.font_warning:
+        print(f"warning: {s.font_warning}", file=sys.stderr)
     return 0
 
 

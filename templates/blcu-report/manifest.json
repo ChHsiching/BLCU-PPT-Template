@@ -77,6 +77,14 @@
     "background": "#FFFFFF",
     "detail_ref": "extracted/colors.json"
   },
+  "fonts": {
+    "embed": {
+      "face": "Noto Sans SC",
+      "regular": "../../fonts/NotoSansSC-Regular.ttf",
+      "bold": "../../fonts/NotoSansSC-Bold.ttf",
+      "note": "渲染时按 deck 实际用字做 fonttools 子集化，以 EOT fntdata 部件嵌入成品（PowerPoint 实测认此格式）；fonttools 缺失时降级为仅声明字面并警告。路径相对本 manifest；SIL OFL 许可见 fonts/OFL-LICENSE.txt"
+    }
+  },
   "brand_media_ref": "extracted/media.json",
   "budget_semantics": {
     "chars": "字数按 CJK 等宽计（半角字符计 0.5）；容量核定扣除文本框内边距（左右各 0.1in）",
