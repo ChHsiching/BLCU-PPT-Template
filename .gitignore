@@ -22,5 +22,5 @@ Thumbs.db
 # local issue-body staging
 .scratch/
 
-# tracer-bullet generated artifacts (pptx + web project stay local)
-examples/tracer-bullet/out/
+# generated deck artifacts stay local (any presentation project's out/: pptx + web)
+out/
