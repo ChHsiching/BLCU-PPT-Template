@@ -515,3 +515,22 @@ def test_full_fixture_template_original_is_never_modified(tmp_path):
     _, proc = render(tmp_path, FULL_DECK)
     assert proc.returncode == 0, proc.stderr + proc.stdout
     assert hashlib.sha256(TEMPLATE_PPTX.read_bytes()).hexdigest() == before
+
+
+def test_text_image_single_image_uses_primary_column():
+    # 单图变体：图片入 image_primary 大区（右栏整版），文字入 text_column（左栏），
+    # 不再走模板原 image_slots 的横条小图位
+    deck = load("deck.json")
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    page = deck["pages"][4]  # text-image page
+    keep = page["blocks"][4]  # first image block (keep exactly one)
+    page["blocks"] = [page["blocks"][0], page["blocks"][1], page["blocks"][2], keep]
+    result = rp.render_deck(deck, manifest, TEMPLATE_PPTX, image_root=FIXTURE_DIR)
+    slide = result.presentation.slides[4]
+    regions = manifest["archetypes"]["text-image"]["regions"]
+    pics = [sp for sp in shapes(slide) if sp.shape_type == 13]
+    assert len(pics) == 1
+    assert_fitted_in(pics[0], regions["image_primary"])
+    column = next(sp for sp in non_placeholder_shapes(slide) if sp.name == "TextColumn")
+    assert_region(column, regions["text_column"])
+    assert not any(sp.name == "TextArea" for sp in non_placeholder_shapes(slide))

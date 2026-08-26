@@ -581,13 +581,29 @@ def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
             for item in b["items"]:
                 paragraphs.append(_text_paragraph(f"- {item}", size_pt=size,
                                                   latin=body["face"], ea=body["face"]))
+
+    images = [b for b in page["blocks"] if b["type"] == "image"]
+    # 单图变体：左文右图整版（设计布局，非模板原框）——图占右栏大区，
+    # 文字入左栏纵列；多图仍走模板原 slots 顺序摆位
+    single = len(images) == 1 and "image_primary" in arch["regions"]
+    if single:
+        if paragraphs:
+            box = _textbox_shape("TextColumn", arch["regions"]["text_column"],
+                                 _next_shape_id(el))
+            _fill_textbox(box, paragraphs)
+            _sp_tree(el).append(box)
+        slot = arch["regions"]["image_primary"]
+        _add_fitted_picture(slide, vd.resolve_image_path(images[0]["path"], image_root), slot)
+        if images[0].get("caption"):
+            _add_caption(el, slot, images[0]["caption"], manifest, 1)
+        return
+
     if paragraphs:
         box = _textbox_shape("TextArea", arch["regions"]["text"], _next_shape_id(el))
         _fill_textbox(box, paragraphs)
         _sp_tree(el).append(box)
 
     slots = arch["regions"]["image_slots"]
-    images = [b for b in page["blocks"] if b["type"] == "image"]
     if len(images) > len(slots):
         raise RenderError(
             f"text-image page carries {len(images)} images but the manifest has "

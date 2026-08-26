@@ -59,6 +59,10 @@ export function TextImagePage({ page, arch, revealed }) {
     }
   }
 
+  // 单图变体：左文右图整版（与 render_pptx.fill_text_image 的单图分支一致）；
+  // 多图仍走模板原 slots。
+  const single = images.length === 1 && arch.regions.image_primary
+
   return (
     <>
       <TitleBar text={titleOf(page)} arch={arch} />
@@ -78,7 +82,7 @@ export function TextImagePage({ page, arch, revealed }) {
         <div
           className="region-text"
           style={{
-            ...regionStyle(arch.regions.text),
+            ...regionStyle(single ? arch.regions.text_column : arch.regions.text),
             fontFamily: fontStack(body.face),
             fontSize: ptToPx(body.secondary_size_pt),
           }}
@@ -90,9 +94,11 @@ export function TextImagePage({ page, arch, revealed }) {
           ))}
         </div>
       )}
-      {images.map((block, i) => (
-        <FittedSlot key={i} slot={slots[i]} block={block} />
-      ))}
+      {single ? (
+        <FittedSlot slot={arch.regions.image_primary} block={images[0]} />
+      ) : (
+        images.map((block, i) => <FittedSlot key={i} slot={slots[i]} block={block} />)
+      )}
     </>
   )
 }
