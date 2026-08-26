@@ -37,10 +37,14 @@ export function TextFormulaPage({ page, arch }) {
             ...regionStyle(formulas.length > 0 ? arch.regions.text : arch.regions.text_full),
             fontFamily: fontStack(formulas.length > 0 ? accent.face : body.face),
             fontSize: ptToPx(formulas.length > 0 ? accent.size_pt : body.size_pt),
+            // 纯文字页与 pptx 同步：150% 行距 + 段前 12pt（模板 slide 21 实测）
+            ...(formulas.length === 0 && { lineHeight: 1.5 }),
           }}
         >
           {texts.map((t, i) => (
-            <p key={i}>{t}</p>
+            <p key={i} style={formulas.length === 0 ? { marginTop: i === 0 ? 0 : ptToPx(12) } : undefined}>
+              {t}
+            </p>
           ))}
         </div>
       )}

@@ -238,9 +238,12 @@ class TestBudgets:
         assert "title_max_chars" in f.message and "16" in f.message
 
     def test_text_blocks_count(self):
-        # text-formula text_blocks_max = 2 -> add a third text block
+        # text-formula text_blocks_max 从 manifest 读取（现为 8，短段落一段一要点）
         deck, _ = load_fixture()
-        deck["pages"][3]["blocks"].append({"type": "text", "text": "第三段补充说明文字。"})
+        cap = BUDGETS["text-formula"]["budget"]["text_blocks_max"]
+        have = sum(1 for b in deck["pages"][3]["blocks"] if b["type"] == "text")
+        for _ in range(cap - have + 1):
+            deck["pages"][3]["blocks"].append({"type": "text", "text": "补充说明。"})
         findings = validate(deck)
         assert any(f.code == "budget.text_blocks_count" and f.path == "pages[3]" for f in findings)
 

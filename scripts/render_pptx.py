@@ -212,10 +212,14 @@ def _text_run_xml(text: str, sz_hundred: int, latin: str, ea: str) -> str:
 
 
 def _text_paragraph(text: str, *, size_pt: int, latin: str, ea: str,
-                    algn: str | None = None) -> etree._Element:
+                    algn: str | None = None, ln_pct: int = 100,
+                    spc_bef_pt: float = 0) -> etree._Element:
     algn_attr = f' algn="{algn}"' if algn else ""
     pPr = f'<a:pPr indent="0"{algn_attr}>'
-    pPr += '<a:lnSpc><a:spcPct val="100000"/></a:lnSpc><a:buNone/></a:pPr>'
+    pPr += f'<a:lnSpc><a:spcPct val="{ln_pct * 1000}"/></a:lnSpc>'
+    if spc_bef_pt:
+        pPr += f'<a:spcBef><a:spcPts val="{int(spc_bef_pt * 100)}"/></a:spcBef>'
+    pPr += '<a:buNone/></a:pPr>'
     run = _text_run_xml(text, size_pt * 100, latin, ea)
     end = (f'<a:endParaRPr lang="en-US" sz="{size_pt * 100}" b="0" strike="noStrike" spc="-1">'
            f"{_RUN_SOLID_FILL}</a:endParaRPr>")
@@ -514,13 +518,18 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
         if formulas:
             region, latin, face, size = (arch["regions"]["text"], accent["face"],
                                          accent["face"], accent["size_pt"])
+            paras = [_text_paragraph(t, size_pt=size, latin=latin, ea=face)
+                     for t in texts]
         else:
+            # 纯文字页（text_full）：模板 slide 21 实测手法——150% 行距 + 段前 12pt
             region, latin, face, size = (arch["regions"]["text_full"], body["face"],
                                          body["face"], body["size_pt"])
+            paras = [_text_paragraph(t, size_pt=size, latin=latin, ea=face,
+                                     ln_pct=150, spc_bef_pt=12)
+                     for t in texts]
         box = _textbox_shape("TextArea" if formulas else "TextFullArea",
                              region, _next_shape_id(el))
-        _fill_textbox(box, [_text_paragraph(t, size_pt=size, latin=latin, ea=face)
-                            for t in texts])
+        _fill_textbox(box, paras)
         _sp_tree(el).append(box)
 
 

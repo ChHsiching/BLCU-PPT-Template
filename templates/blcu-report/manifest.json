@@ -188,7 +188,7 @@
         "slide": 3,
         "layout": "标题和内容"
       },
-      "evidence": "slide 3（公式区 Rectangle 2 + 楷体文字区 文本框 3，实测单块 117 字；文字区高度由实测 1.78in 下延至 2.2in——原页该区下方为留白，底边 6.52 仍在安全线内）；公式密集变体见 slide 12/13；text_full 取自 slide 11 实测全高文字框（x 由实测 0.35 归一到标题列 0.74）",
+      "evidence": "slide 3（公式区 Rectangle 2 + 楷体文字区 文本框 3，实测单块 117 字；文字区高度由实测 1.78in 下延至 2.2in——原页该区下方为留白，底边 6.52 仍在安全线内）；公式密集变体见 slide 12/13；text_full 取自 slide 11 实测全高文字框（x 由实测 0.35 归一到标题列 0.74）；text_blocks_max 8 依据 slide 11 的 14 短段落实证（一段一要点），150% 行距+段前 12pt 为 slide 21 实测",
       "regions": {
         "title": {
           "x": 0.74,
@@ -223,7 +223,7 @@
       },
       "budget": {
         "title_max_chars": 25,
-        "text_blocks_max": 2,
+        "text_blocks_max": 8,
         "text_block_max_chars": 207,
         "text_total_max_chars": 207,
         "subhead_max_chars": 0,
