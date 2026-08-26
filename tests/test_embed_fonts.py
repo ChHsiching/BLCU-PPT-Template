@@ -112,6 +112,16 @@ def test_collect_deck_characters_covers_every_rendered_field():
     # latex is Cambria Math territory and never collected
 
 
+def test_collect_deck_characters_keeps_emphasis_markers():
+    # collection is raw: literal roles (caption/title) render ** verbatim,
+    # so the subset must cover the marker character too
+    deck = {"pages": [{"blocks": [
+        {"type": "text", "text": "**关键**词正文"},
+        {"type": "image", "path": "x.png", "caption": "**注**"},
+    ]}]}
+    assert efont.collect_deck_characters(deck) == set("**关键词正文注- 0123456789")
+
+
 def test_wrap_eot_mirrors_powerpoint_layout():
     chars = set("嵌入字体测试ABC123")
     for weight, bold_bit in ((400, False), (700, True)):
@@ -161,7 +171,8 @@ def test_cli_embeds_fonts_into_fixture_deck(tmp_path):
 def test_embedded_subsets_cover_deck_chars_under_1mb(tmp_path):
     deck = json.loads(FIXTURE_DECK.read_text(encoding="utf-8"))
     chars = efont.collect_deck_characters(deck)
-    assert chars  # not vacuously green
+    assert "*" in chars  # fixture carries **markers**; raw collection keeps them
+    assert chars
     out_path, proc = render_cli(tmp_path)
     assert proc.returncode == 0, proc.stderr + proc.stdout
     parts = embedded_parts(out_path)

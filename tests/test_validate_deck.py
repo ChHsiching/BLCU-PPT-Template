@@ -382,7 +382,7 @@ class TestBudgets:
 
 
 class TestS2BudgetRecheck:
-    """S2（#16）重核预算：值钉死 + 边界锁定（恰好达上限可过，超一档即拒）。
+    """S2（#16）重核预算（单行档）：值钉死 + 边界锁定。
 
     值变动来源：小标题 28→24pt、agenda 标签 48→40pt、agenda 列表 24→22pt
     （manifest typography.tokens.roles；算式见各 archetype 的 budget_derivation）。
@@ -391,7 +391,6 @@ class TestS2BudgetRecheck:
     def test_rechecked_values_pinned(self):
         assert BUDGETS["text-image"]["budget"]["subhead_max_chars"] == 17
         assert BUDGETS["agenda"]["budget"]["title_max_chars"] == 5
-        assert BUDGETS["agenda"]["budget"]["text_total_max_chars"] == 427
 
     def test_subhead_boundary(self):
         cap = BUDGETS["text-image"]["budget"]["subhead_max_chars"]
@@ -404,6 +403,50 @@ class TestS2BudgetRecheck:
         assert validate(over(1, 0, "text", "一" * cap)) == []
         assert any(f.code == "budget.title_chars"
                    for f in validate(over(1, 0, "text", "一" * (cap + 1))))
+
+
+class TestS3BudgetRecheck:
+    """S3（#18）重核预算（多行档）：1.5 行距落地后按 COM 实测音高重核。
+
+    实测依据 scripts/measure_line_pitch.py（PowerPoint 16 COM，
+    TextRange.BoundHeight）：spcPct 150% 下每行 1.779em（18pt→32.02、
+    20pt→35.58、22pt→39.14），核定型扣一段 12pt 段前——多行容量整体收缩
+    约 1/3，五个多行预算值钉死在此。
+    """
+
+    def test_rechecked_values_pinned(self):
+        assert BUDGETS["agenda"]["budget"]["text_total_max_chars"] == 278
+        tf = BUDGETS["text-formula"]["budget"]
+        assert tf["text_block_max_chars"] == 125
+        assert tf["text_total_max_chars"] == 125
+        assert tf["text_total_max_chars_full"] == 383
+        ti = BUDGETS["text-image"]["budget"]
+        assert ti["text_block_max_chars"] == 135
+        assert ti["text_total_max_chars"] == 135
+        cf = BUDGETS["chart-focus"]["budget"]
+        assert cf["text_block_max_chars"] == 37
+        assert cf["text_total_max_chars"] == 37
+
+    def test_text_image_total_boundary(self):
+        # total covers subhead + text + items — isolate a single text block so
+        # the cap itself is what's being hit: 恰达 135 过，136 拒
+        cap = BUDGETS["text-image"]["budget"]["text_total_max_chars"]
+        deck, _ = load_fixture()
+        page = deck["pages"][4]
+        page["blocks"] = [
+            page["blocks"][0],                  # title
+            {"type": "text", "text": "一" * cap},
+            page["blocks"][4],                  # one image (images_min 1)
+        ]
+        assert validate(deck) == []
+        page["blocks"][1]["text"] = "一" * (cap + 1)
+        assert any(f.code == "budget.text_total_chars" for f in validate(deck))
+
+    def test_chart_focus_total_boundary(self):
+        cap = BUDGETS["chart-focus"]["budget"]["text_total_max_chars"]
+        assert validate(over(5, 2, "text", "一" * cap)) == []
+        findings = validate(over(5, 2, "text", "一" * (cap + 1)))
+        assert any(f.code == "budget.text_total_chars" for f in findings)
 
 
 class TestImages:

@@ -3,10 +3,14 @@
 Contract under test: a deck.json renders against the real template original via
 Clone & Fill; the output reopens with python-pptx carrying the right page
 count, per-page titles, native OMML formulas, embedded images, manifest-region
-geometry, master branding, and zero template residue. deck_pptx.json exercises
-cover + text-formula in depth (T3); deck.json is the T2 full-archetype fixture
-covering agenda / text-image / chart-focus / closing too (T4). The template
-original must be byte-identical after rendering.
+geometry, master branding, zero template residue — and, since S3, the full
+typography.tokens role system at run level: face/size/weight/color per role,
+**keyword** emphasis runs, caption scrim strips, the body spacing rhythm
+(line 1.5 / before 12pt), token textbox insets, hairline on white-background
+images, and the S1 font embed riding along. deck_pptx.json exercises cover +
+text-formula in depth (T3); deck.json is the T2 full-archetype fixture covering
+agenda / text-image / chart-focus / closing too (T4). The template original
+must be byte-identical after rendering.
 """
 import hashlib
 import json
@@ -138,18 +142,58 @@ def assert_fitted_in(pic, slot):
     assert top - sy == pytest.approx(sy + sh - (top + height), abs=4)
 
 
-def run_font(sp):
-    """(sz, latin, ea) of the first run with an explicit size in the shape."""
+def run_color(rPr):
+    fill = rPr.find(f"{{{NS_A}}}solidFill/{{{NS_A}}}srgbClr")
+    return fill.get("val") if fill is not None else None
+
+
+def run_face(rPr, which):
+    el = rPr.find(f"{{{NS_A}}}{which}")
+    return el.get("typeface") if el is not None else None
+
+
+def run_style(sp):
+    """(sz_pt, bold, color, latin, ea) of the first explicitly sized run."""
     for rPr in sp._element.iter(f"{{{NS_A}}}rPr"):
         sz = rPr.get("sz")
         if sz is None:
             continue
-        latin = rPr.find(f"{{{NS_A}}}latin")
-        ea = rPr.find(f"{{{NS_A}}}ea")
-        return (int(sz) // 100,
-                latin.get("typeface") if latin is not None else None,
-                ea.get("typeface") if ea is not None else None)
+        return (int(sz) // 100, rPr.get("b") == "1", run_color(rPr),
+                run_face(rPr, "latin"), run_face(rPr, "ea"))
     return None
+
+
+def shape_runs(sp):
+    """[(text, sz_pt, bold, color)] for every text run in the shape, in order."""
+    out = []
+    for r in sp._element.iter(f"{{{NS_A}}}r"):
+        rPr = r.find(f"{{{NS_A}}}rPr")
+        out.append((r.find(f"{{{NS_A}}}t").text,
+                    int(rPr.get("sz", "0")) // 100,
+                    rPr.get("b") == "1",
+                    run_color(rPr)))
+    return out
+
+
+def first_para_props(sp):
+    """(line_spacing_pct, space_before_pt) of the shape's first paragraph."""
+    pPr = sp._element.find(f".//{{{NS_A}}}pPr")
+    if pPr is None:
+        return (None, 0)
+    ln = pPr.find(f"{{{NS_A}}}lnSpc/{{{NS_A}}}spcPct")
+    bef = pPr.find(f"{{{NS_A}}}spcBef/{{{NS_A}}}spcPts")
+    return (int(ln.get("val")) // 1000 if ln is not None else None,
+            int(bef.get("val")) // 100 if bef is not None else 0)
+
+
+def body_insets(sp):
+    bodyPr = sp._element.find(f".//{{{NS_A}}}bodyPr")
+    return tuple(int(bodyPr.get(k)) for k in ("lIns", "tIns", "rIns", "bIns"))
+
+
+NOTO = "Noto Sans SC"
+TITLE_44 = (44, True, "000000", NOTO, NOTO)
+TITLE_28 = (28, True, "000000", NOTO, NOTO)
 
 
 xsl = rp.find_mml2omml_xsl()
@@ -201,12 +245,12 @@ def test_render_pipeline(tmp_path):
     assert title1 is not None
     assert title1.text_frame.text == deck["pages"][0]["blocks"][0]["text"]
     assert_region(title1, arch["cover"]["regions"]["title"])
-    assert run_font(title1) == (44, "Times New Roman", "华文中宋")
+    assert run_style(title1) == TITLE_44
     sub1 = by_ph(s1, "body")
     assert sub1 is not None
     assert sub1.text_frame.text == "汇报人:张三 2026-08-25"
     assert_region(sub1, arch["cover"]["regions"]["subtitle"])
-    assert run_font(sub1) == (24, "Times New Roman", "华文中宋")
+    assert run_style(sub1) == (24, False, "000000", NOTO, NOTO)
     assert by_ph(s1, "sldNum") is None  # cover carries no page number
     assert non_placeholder_shapes(s1) == []
 
@@ -215,7 +259,7 @@ def test_render_pipeline(tmp_path):
     title2 = by_ph(s2, "title")
     assert title2.text_frame.text == "方法：对比学习框架"
     assert_region(title2, arch["text-formula"]["regions"]["title"])
-    assert run_font(title2) == (44, "Times New Roman", "华文中宋")
+    assert run_style(title2) == TITLE_44
     assert omath_count(s2) == 2
     # page-number placeholder preserved as a field
     sldnum = by_ph(s2, "sldNum")
@@ -235,17 +279,18 @@ def test_render_pipeline(tmp_path):
     formula_box, text_box = sorted(boxes, key=lambda sp: sp.top)
     assert_region(formula_box, arch["text-formula"]["regions"]["formula"])
     assert_region(text_box, arch["text-formula"]["regions"]["text"])
-    assert run_font(text_box) == (20, "黑体", "黑体")
+    assert run_style(text_box) == (20, False, "000000", NOTO, NOTO)
     assert text_box.text_frame.text == deck["pages"][1]["blocks"][3]["text"]
 
-    # -- slide 3: pure-text variant uses the full-height region, 黑体
+    # -- slide 3: pure-text variant uses the full-height region, body role
     s3 = prs.slides[2]
     assert omath_count(s3) == 0
     assert by_ph(s3, "sldNum") is not None
     boxes3 = non_placeholder_shapes(s3)
     assert len(boxes3) == 1
     assert_region(boxes3[0], arch["text-formula"]["regions"]["text_full"])
-    assert run_font(boxes3[0]) == (20, "黑体", "黑体")
+    assert run_style(boxes3[0]) == (20, False, "000000", NOTO, NOTO)
+    # markers are stripped from the rendered text (they become styled runs)
     assert boxes3[0].text_frame.text == (
         "神经机器翻译在低资源场景下性能受限，平行语料稀缺是主要瓶颈。\n"
         "对比学习通过拉近正例、推远负例，可在无监督条件下学到通用表示。"
@@ -280,7 +325,7 @@ def test_long_title_switches_to_28pt(tmp_path):
     out_path, proc = render(tmp_path, long_deck)
     assert proc.returncode == 0, proc.stderr + proc.stdout
     prs = Presentation(out_path)
-    assert run_font(by_ph(prs.slides[2], "title")) == (28, "Times New Roman", "华文中宋")
+    assert run_style(by_ph(prs.slides[2], "title")) == TITLE_28
 
 
 # ---------------------------------------------------------------------------
@@ -424,10 +469,10 @@ def test_render_full_fixture(tmp_path):
     regions = arch["agenda"]["regions"]
     assert_region(label, regions["label"])
     assert label.text_frame.text == deck["pages"][1]["blocks"][0]["text"]
-    assert run_font(label) == (48, "黑体", "黑体")
+    assert run_style(label) == (40, True, "000000", NOTO, NOTO)
     assert_region(item_list, regions["list"])
     assert item_list.text_frame.text == "\n".join(deck["pages"][1]["blocks"][1]["items"])
-    assert run_font(item_list) == (24, "黑体", "黑体")
+    assert run_style(item_list) == (22, False, "000000", NOTO, NOTO)
     # the acceptance check: nothing on the agenda page leaves the 13.33x7.5 canvas
     canvas_w, canvas_h = Inches(13.3333), Inches(7.5)
     for sp in shapes(agenda):
@@ -451,26 +496,34 @@ def test_render_full_fixture(tmp_path):
     subhead = next(sp for sp in boxes if sp.name == "SubheadArea")
     assert_region(subhead, ti_regions["subhead"])
     assert subhead.text_frame.text == ti_page["blocks"][1]["text"]
-    assert run_font(subhead) == (28, "黑体", "黑体")
+    assert run_style(subhead) == (24, True, "548235", NOTO, NOTO)
     textbox = next(sp for sp in boxes if sp.name == "TextArea")
     assert_region(textbox, ti_regions["text"])
     assert textbox.text_frame.text == "\n".join(
         [ti_page["blocks"][2]["text"], *(f"- {item}" for item in ti_page["blocks"][3]["items"])]
     )
-    assert run_font(textbox) == (18, "黑体", "黑体")
+    assert run_style(textbox) == (18, False, "595959", NOTO, NOTO)
     pics = [sp for sp in shapes(ti) if sp.shape_type == 13]  # PICTURE
     assert len(pics) == 2
     assert_fitted_in(pics[0], ti_regions["image_slots"][0])
     assert_fitted_in(pics[1], ti_regions["image_slots"][1])
-    # caption: 10pt Calibri overlay strip at slot 0's internal bottom edge
+    # colored fixture images carry no hairline (white-background images do)
+    for pic in pics:
+        assert pic._element.spPr.find(f"{{{NS_A}}}ln") is None
+    # caption: 12pt white-on-black-scrim strip over the fitted image's bottom
+    # edge (hugs the fitted picture, not the slot)
     caption = next(sp for sp in boxes if sp.name == "Caption1")
-    slot0 = ti_regions["image_slots"][0]
-    strip_h = Inches(0.25)
+    strip_h = Inches(0.30)
     assert list(region_of(caption)) == pytest.approx(
-        [Inches(slot0["x"]), Inches(slot0["y"]) + Inches(slot0["h"]) - strip_h,
-         Inches(slot0["w"]), strip_h], abs=2)
+        [pics[0].left, pics[0].top + pics[0].height - strip_h,
+         pics[0].width, strip_h], abs=2)
     assert caption.text_frame.text == ti_page["blocks"][4]["caption"]
-    assert run_font(caption) == (10, "Calibri", "Calibri")
+    assert run_style(caption) == (12, False, "FFFFFF", NOTO, NOTO)
+    scrim = caption._element.find(
+        f"{{{NS_P}}}spPr/{{{NS_A}}}solidFill/{{{NS_A}}}srgbClr")
+    assert scrim is not None and scrim.get("val") == "000000"
+    alpha = scrim.find(f"{{{NS_A}}}alpha")
+    assert alpha is not None and alpha.get("val") == "60000"
     assert len(boxes) == 5  # subhead + text + caption + 2 pictures
 
     # -- page 6: chart-focus = one big fitted image + side comment
@@ -483,14 +536,14 @@ def test_render_full_fixture(tmp_path):
     comment = next(sp for sp in non_placeholder_shapes(cf) if sp.name == "CommentArea")
     assert_region(comment, cf_regions["comment"])
     assert comment.text_frame.text == deck["pages"][5]["blocks"][2]["text"]
-    assert run_font(comment) == (18, "黑体", "黑体")
+    assert run_style(comment) == (18, False, "595959", NOTO, NOTO)
 
     # -- page 7: closing = cover variant
     closing = prs.slides[6]
     title = by_ph(closing, "title")
     assert title.text_frame.text == deck["pages"][6]["blocks"][0]["text"]
     assert_region(title, arch["closing"]["regions"]["title"])
-    assert run_font(title) == (44, "Times New Roman", "华文中宋")
+    assert run_style(title) == TITLE_44
     sub = by_ph(closing, "body")
     assert sub.text_frame.text == deck["pages"][6]["blocks"][1]["text"]
     assert_region(sub, arch["closing"]["regions"]["subtitle"])
@@ -534,3 +587,137 @@ def test_text_image_single_image_uses_primary_column():
     column = next(sp for sp in non_placeholder_shapes(slide) if sp.name == "TextColumn")
     assert_region(column, regions["text_column"])
     assert not any(sp.name == "TextArea" for sp in non_placeholder_shapes(slide))
+
+
+# ---------------------------------------------------------------------------
+# S3: typography.tokens land at run level — emphasis runs, spacing rhythm,
+# token insets, caption scrim, white-image hairline, font embed
+# ---------------------------------------------------------------------------
+
+@requires_math
+def test_emphasis_marker_renders_green_bold_inline_runs():
+    deck = load("deck_pptx.json")
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    result = rp.render_deck(deck, manifest, TEMPLATE_PPTX)
+    box = next(sp for sp in non_placeholder_shapes(result.presentation.slides[2])
+               if sp.name == "TextFullArea")
+    runs = shape_runs(box)
+    # markers never survive into a:t text; the keyword becomes its own run
+    assert all("**" not in (r[0] or "") for r in runs)
+    assert ("对比学习", 20, True, "548235") in runs
+    tail = next(r for r in runs if r[0].startswith("通过拉近正例"))
+    assert tail[1:] == (20, False, "000000")
+    # the marker-free paragraph stays one regular black run
+    assert ("神经机器翻译在低资源场景下性能受限，平行语料稀缺是主要瓶颈。",
+            20, False, "000000") in runs
+
+
+def test_unmatched_emphasis_marker_stays_literal():
+    deck = load("deck_pptx.json")
+    deck["pages"][2]["blocks"] = [
+        {"type": "title", "text": "研究背景与动机"},
+        {"type": "text", "text": "不带成对标记的 ** 星号正文"},   # 1 marker
+        {"type": "text", "text": "**** 四个星号"},               # empty pair
+    ]
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    result = rp.render_deck(deck, manifest, TEMPLATE_PPTX)
+    box = next(sp for sp in non_placeholder_shapes(result.presentation.slides[2])
+               if sp.name == "TextFullArea")
+    # unpaired and empty markers both stay literal — never an empty paragraph
+    assert [(r[0], r[2]) for r in shape_runs(box)] == [
+        ("不带成对标记的 ** 星号正文", False),
+        ("**** 四个星号", False),
+    ]
+
+
+@requires_math
+def test_emphasis_is_body_only_and_covers_body_flow_roles():
+    # 正文内 convention: ** in a title/subtitle stays literal black (no green
+    # run); the same marker in body-flow text — body paragraphs, agenda list
+    # items — emphasizes (explicitly accepted extension of 正文: every role
+    # that carries the rhythm)
+    deck = load("deck.json")
+    deck["pages"][0]["blocks"][0]["text"] = "带**标记**的封面标题"
+    deck["pages"][0]["blocks"][1]["text"] = "汇报人:张三 **强调** 2026-08-25"
+    deck["pages"][3]["blocks"][2]["text"] = "**关键词**正文一行。"
+    deck["pages"][1]["blocks"][1]["items"] = ["一 **重点**章节", "二 次要章节"]
+    # literal roles: subhead and caption keep ** verbatim (the caption case
+    # is what raw font-subset collection depends on)
+    deck["pages"][4]["blocks"][1]["text"] = "小标题**不**强调"
+    deck["pages"][4]["blocks"][4]["caption"] = "图注**保持**字面"
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    result = rp.render_deck(deck, manifest, TEMPLATE_PPTX, image_root=FIXTURE_DIR)
+    prs = result.presentation
+
+    cover_title = by_ph(prs.slides[0], "title")
+    assert shape_runs(cover_title) == [("带**标记**的封面标题", 44, True, "000000")]
+    cover_sub = by_ph(prs.slides[0], "body")
+    assert shape_runs(cover_sub) == [("汇报人:张三 **强调** 2026-08-25",
+                                      24, False, "000000")]
+    body_box = next(sp for sp in non_placeholder_shapes(prs.slides[3])
+                    if sp.name == "TextFullArea")
+    assert ("关键词", 20, True, "548235") in shape_runs(body_box)
+    agenda_list = next(sp for sp in non_placeholder_shapes(prs.slides[1])
+                       if sp.name == "AgendaList")
+    assert ("重点", 22, True, "548235") in shape_runs(agenda_list)
+    ti_boxes = non_placeholder_shapes(prs.slides[4])
+    subhead = next(sp for sp in ti_boxes if sp.name == "SubheadArea")
+    assert shape_runs(subhead) == [("小标题**不**强调", 24, True, "548235")]
+    caption = next(sp for sp in ti_boxes if sp.name == "Caption1")
+    assert shape_runs(caption) == [("图注**保持**字面", 12, False, "FFFFFF")]
+
+
+@requires_math
+def test_body_rhythm_and_insets_follow_tokens():
+    deck = load("deck.json")
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    result = rp.render_deck(deck, manifest, TEMPLATE_PPTX, image_root=FIXTURE_DIR)
+    prs = result.presentation
+
+    def by_name(slide, name):
+        return next(sp for sp in non_placeholder_shapes(slide) if sp.name == name)
+
+    # flowing body text carries the rhythm: line spacing 1.5, before 12pt
+    assert first_para_props(by_name(prs.slides[2], "TextArea")) == (150, 12)
+    assert first_para_props(by_name(prs.slides[3], "TextFullArea")) == (150, 12)
+    assert first_para_props(by_name(prs.slides[1], "AgendaList")) == (150, 12)
+    assert first_para_props(by_name(prs.slides[4], "TextArea")) == (150, 12)
+    assert first_para_props(by_name(prs.slides[5], "CommentArea")) == (150, 12)
+    # ceremonial single-line roles stay at single spacing, no space-before
+    assert first_para_props(by_ph(prs.slides[0], "title")) == (100, 0)
+    assert first_para_props(by_ph(prs.slides[0], "body")) == (100, 0)
+    assert first_para_props(by_name(prs.slides[1], "AgendaLabel")) == (100, 0)
+    assert first_para_props(by_name(prs.slides[4], "SubheadArea")) == (100, 0)
+    assert first_para_props(by_name(prs.slides[4], "Caption1")) == (100, 0)
+    # synthesized content boxes carry the token insets (0.1in sides, 0.05in ends)
+    for slide in prs.slides:
+        for sp in non_placeholder_shapes(slide):
+            if sp.shape_type == 13:  # pictures carry no bodyPr
+                continue
+            assert body_insets(sp) == (91440, 45720, 91440, 45720), sp.name
+
+
+@requires_math
+def test_hairline_outlines_white_background_images():
+    deck = load("deck.json")
+    deck["pages"][5]["blocks"][1]["path"] = "material/images/white-chart.png"
+    manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
+    result = rp.render_deck(deck, manifest, TEMPLATE_PPTX, image_root=FIXTURE_DIR)
+    pic = next(sp for sp in shapes(result.presentation.slides[5])
+               if sp.shape_type == 13)
+    ln = pic._element.spPr.find(f"{{{NS_A}}}ln")
+    assert ln is not None and ln.get("w") == "9525"  # 0.75pt
+    clr = ln.find(f"{{{NS_A}}}solidFill/{{{NS_A}}}srgbClr")
+    assert clr is not None and clr.get("val") == "D9D9D9"
+
+
+@requires_math
+def test_full_fixture_carries_embedded_font_subsets(tmp_path):
+    out_path, proc = render(tmp_path, FULL_DECK)
+    assert proc.returncode == 0, proc.stderr + proc.stdout
+    assert "embedded Noto Sans SC subset" in proc.stdout
+    with zipfile.ZipFile(out_path) as z:
+        names = z.namelist()
+        assert [n for n in names if n.endswith(".fntdata")] == [
+            "ppt/fonts/font1.fntdata", "ppt/fonts/font2.fntdata"]
+        assert b'<p:font typeface="Noto Sans SC"' in z.read("ppt/presentation.xml")

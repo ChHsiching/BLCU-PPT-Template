@@ -15,8 +15,15 @@ go LaTeX -> MathML -> OMML (MML2OMML.XSL) as native Cambria Math objects in the
 same mc:AlternateContent/a14:m serialization the template itself uses; a
 formula whose conversion fails falls back to a rendered image inside the
 formula region. Images from deck.json blocks are contain-fitted into the
-manifest regions/slots (aspect preserved, centered); captions render as 10pt
-overlay strips at the owning slot's internal bottom edge. Original template
+manifest regions/slots (aspect preserved, centered); white-background images
+additionally get the manifest image.hairline token (#D9D9D9 0.75pt) so they do
+not dissolve into the page. Captions render as 12pt white-on-black-scrim
+overlay strips at the owning slot's internal bottom edge. All content
+typography is driven by the manifest's typography.tokens role system
+(role_bindings resolve regions to roles: Noto Sans SC everywhere, weight +
+color hierarchy, **keyword** emphasis runs in green Bold, body spacing rhythm
+line 1.5 / before 12pt / 0.1in-0.05in textbox insets), and the rendered fonts
+are subset-embedded per the manifest fonts.embed token. Original template
 slides are deleted high-index-first after cloning. All 6 archetypes are
 supported: cover, agenda, text-formula, text-image, chart-focus, closing.
 
@@ -28,9 +35,11 @@ from __future__ import annotations
 
 import argparse
 import copy
+import functools
 import io
 import json
 import os
+import re
 import sys
 import zipfile
 from dataclasses import dataclass
@@ -42,12 +51,13 @@ import lxml.etree as etree
 # this file's own shell templates) must parse with entities unresolved.
 _XML_PARSER = etree.XMLParser(resolve_entities=False, no_network=True, load_dtd=False)
 from pptx import Presentation
+from pptx.dml.color import RGBColor
 from pptx.opc.constants import CONTENT_TYPE as CT
 from pptx.opc.constants import RELATIONSHIP_TYPE as RT
 from pptx.oxml import parse_xml
 from pptx.oxml.ns import qn
 from pptx.parts.slide import SlidePart
-from pptx.util import Inches
+from pptx.util import Inches, Pt
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import embed_fonts as efont  # noqa: E402
@@ -196,35 +206,122 @@ def render_latex_png_bytes(latex: str) -> bytes:
 
 
 # ---------------------------------------------------------------------------
-# XML building blocks (element level; mirror the template's own serialization)
+# typography tokens + XML building blocks (element level; mirror the
+# template's own serialization)
 # ---------------------------------------------------------------------------
 
-_RUN_SOLID_FILL = f'<a:solidFill><a:schemeClr val="dk1"/></a:solidFill>'
+def _srgb_val(color: str) -> str:
+    """"#548235" -> "548235" for a:srgbClr/@val."""
+    return color.lstrip("#").upper()
 
 
-def _text_run_xml(text: str, sz_hundred: int, latin: str, ea: str) -> str:
-    rPr = (f'<a:rPr lang="zh-CN" sz="{sz_hundred}" b="0" strike="noStrike" spc="-1">'
-           f"{_RUN_SOLID_FILL}"
-           f'<a:latin typeface="{latin}"/><a:ea typeface="{ea}"/></a:rPr>')
-    escaped = (
-        text.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
-    )
-    return f'<a:r>{rPr}<a:t>{escaped}</a:t></a:r>'
+def _tokens(manifest: dict) -> dict:
+    """The S2 token tree (typography.tokens) — the style single source of truth."""
+    return manifest["typography"]["tokens"]
 
 
-def _text_paragraph(text: str, *, size_pt: int, latin: str, ea: str,
-                    algn: str | None = None, ln_pct: int = 100,
-                    spc_bef_pt: float = 0) -> etree._Element:
+def _role_style(tokens: dict, role_name: str) -> dict:
+    """Resolve a named role to concrete run attrs; face/latin inherit the
+    token family defaults (only the formula role carries its own face, and
+    math runs are styled by _style_math_runs, never through here)."""
+    role = tokens["roles"][role_name]
+    return {
+        "size_pt": role["size_pt"],
+        "face": role.get("face", tokens["face"]),
+        "latin": role.get("face", tokens["latin_face"]),
+        "bold": role["weight"] == "bold",
+        "color": role["color"],
+    }
+
+
+def _region_role_name(tokens: dict, archetype: str, region: str) -> str:
+    """The one path through role_bindings: region -> role name."""
+    return tokens["role_bindings"][archetype][region]
+
+
+def _region_role(tokens: dict, archetype: str, region: str) -> dict:
+    """Region -> role style via typography.tokens.role_bindings."""
+    return _role_style(tokens, _region_role_name(tokens, archetype, region))
+
+
+def _title_style(text: str, tokens: dict, archetype: str) -> dict:
+    """Title role for this page; past title_long.over_chars (CJK width) the
+    long-title downgrade applies (44 -> 28 Bold, weight/color unchanged)."""
+    name = _region_role_name(tokens, archetype, "title")
+    long_role = tokens["roles"].get("title_long")
+    if name == "title" and long_role and \
+            vd.text_width(text) > long_role.get("over_chars", float("inf")):
+        name = "title_long"
+    return _role_style(tokens, name)
+
+
+@functools.lru_cache(maxsize=None)
+def _emphasis_pattern(marker: str) -> re.Pattern:
+    """The **emphasis** marker regex (paired, non-greedy, DOTALL); markers
+    around empty or unpaired content never match and stay literal. Cached —
+    the marker is fixed per manifest, so it compiles once per process, not
+    once per paragraph."""
+    return re.compile(re.escape(marker) + r"(.+?)" + re.escape(marker), re.S)
+
+
+def _split_emphasis(text: str, marker: str) -> list[tuple[str, bool]]:
+    """Split into (segment, emphasized) pairs; unpaired markers stay literal."""
+    if marker and marker in text:
+        # one capture group -> [literal, captured, literal, ...]; the captured
+        # segments (odd indices) are the emphasized ones
+        parts = _emphasis_pattern(marker).split(text)
+        return [(seg, i % 2 == 1) for i, seg in enumerate(parts) if seg]
+    return [(text, False)]
+
+
+def _styled_paragraph(text: str, style: dict, tokens: dict, *,
+                      algn: str | None = None, rhythm: bool = False,
+                      emphasis: bool = False) -> etree._Element:
+    """One paragraph in a resolved role style.
+
+    rhythm=True applies the body spacing tokens (line 1.5 / before 12pt from
+    typography.tokens.spacing) to flowing body text; ceremonial single-line
+    roles stay single-spaced with no space-before. emphasis=True (body-flow
+    roles only, per the 正文内 doctrine) turns **keyword** segments into
+    emphasis runs (tokens.emphasis: bold + accent green); every other role
+    renders markers literally.
+    """
+    spacing = tokens["spacing"]
+    ln_pct = int(float(spacing["line_spacing"]) * 100) if rhythm else 100
+    spc_bef = float(spacing["space_before_pt"]) if rhythm else 0
+    emph_cfg = tokens.get("emphasis", {})
+    marker = emph_cfg.get("marker", "")
+    emph_bold = emph_cfg.get("weight", "bold") == "bold"
+    emph_color = emph_cfg.get("color", style["color"])
+
     algn_attr = f' algn="{algn}"' if algn else ""
     pPr = f'<a:pPr indent="0"{algn_attr}>'
     pPr += f'<a:lnSpc><a:spcPct val="{ln_pct * 1000}"/></a:lnSpc>'
-    if spc_bef_pt:
-        pPr += f'<a:spcBef><a:spcPts val="{int(spc_bef_pt * 100)}"/></a:spcBef>'
+    if spc_bef:
+        pPr += f'<a:spcBef><a:spcPts val="{int(spc_bef * 100)}"/></a:spcBef>'
     pPr += '<a:buNone/></a:pPr>'
-    run = _text_run_xml(text, size_pt * 100, latin, ea)
-    end = (f'<a:endParaRPr lang="en-US" sz="{size_pt * 100}" b="0" strike="noStrike" spc="-1">'
-           f"{_RUN_SOLID_FILL}</a:endParaRPr>")
-    xml = (f'<a:p xmlns:a="{NS_A}">{pPr}{run}{end}</a:p>')
+
+    def run_xml(seg: str, bold: bool, color: str) -> str:
+        b = "1" if bold else "0"
+        rPr = (f'<a:rPr lang="zh-CN" sz="{style["size_pt"] * 100}" b="{b}"'
+               f' strike="noStrike" spc="-1">'
+               f'<a:solidFill><a:srgbClr val="{_srgb_val(color)}"/></a:solidFill>'
+               f'<a:latin typeface="{style["latin"]}"/>'
+               f'<a:ea typeface="{style["face"]}"/></a:rPr>')
+        escaped = (seg.replace("&", "&amp;").replace("<", "&lt;")
+                   .replace(">", "&gt;"))
+        return f"<a:r>{rPr}<a:t>{escaped}</a:t></a:r>"
+
+    segments = _split_emphasis(text, marker) if emphasis else [(text, False)]
+    runs = "".join(
+        run_xml(seg, style["bold"] or (is_emph and emph_bold),
+                emph_color if is_emph else style["color"])
+        for seg, is_emph in segments)
+    end = (f'<a:endParaRPr lang="en-US" sz="{style["size_pt"] * 100}"'
+           f' b="{"1" if style["bold"] else "0"}" strike="noStrike" spc="-1">'
+           f'<a:solidFill><a:srgbClr val="{_srgb_val(style["color"])}"/></a:solidFill>'
+           f"</a:endParaRPr>")
+    xml = f'<a:p xmlns:a="{NS_A}">{pPr}{runs}{end}</a:p>'
     # parse_xml (python-pptx's parser) attaches the CT_TextParagraph class so
     # the paragraph behaves inside python-pptx object trees; input is this
     # module's own template with escaped text, never external content.
@@ -256,10 +353,14 @@ def _math_paragraph(omml) -> etree._Element:
     return p
 
 
-def _textbox_shape(name: str, region: dict, shape_id: int,
-                   anchor: str = "t") -> etree._Element:
+def _textbox_shape(name: str, region: dict, shape_id: int, tokens: dict,
+                   anchor: str = "t", fill_xml: str | None = None) -> etree._Element:
     x, y = int(Inches(region["x"])), int(Inches(region["y"]))
     cx, cy = int(Inches(region["w"])), int(Inches(region["h"]))
+    spacing = tokens["spacing"]
+    h_in = int(Inches(float(spacing["textbox_inset_in"])))
+    v_in = int(Inches(float(spacing["textbox_inset_v_in"])))
+    fill = fill_xml if fill_xml is not None else "<a:noFill/>"
     xml = (
         f'<p:sp xmlns:a="{NS_A}" xmlns:p="{NS_P}">'
         "<p:nvSpPr>"
@@ -268,10 +369,11 @@ def _textbox_shape(name: str, region: dict, shape_id: int,
         '<p:spPr bwMode="auto">'
         f'<a:xfrm><a:off x="{x}" y="{y}"/><a:ext cx="{cx}" cy="{cy}"/></a:xfrm>'
         '<a:prstGeom prst="rect"><a:avLst/></a:prstGeom>'
-        "<a:noFill/><a:ln w=\"0\"><a:noFill/></a:ln>"
+        f"{fill}<a:ln w=\"0\"><a:noFill/></a:ln>"
         "</p:spPr>"
         "<p:txBody>"
-        f'<a:bodyPr lIns="90000" tIns="45000" rIns="90000" bIns="45000" anchor="{anchor}" wrap="square">'
+        f'<a:bodyPr lIns="{h_in}" tIns="{v_in}" rIns="{h_in}" bIns="{v_in}" '
+        f'anchor="{anchor}" wrap="square">'
         "<a:noAutofit/></a:bodyPr>"
         "<a:lstStyle/>"
         "</p:txBody>"
@@ -325,20 +427,45 @@ def _fill_textbox(sp_el, paragraphs) -> None:
         txBody.append(p_el)
 
 
-def _fill_placeholder(sp_el, text: str, *, size_pt: int, latin: str, ea: str,
+def _fill_placeholder(sp_el, text: str, style: dict, tokens: dict,
                       algn: str | None = None) -> None:
-    _fill_textbox(sp_el, [_text_paragraph(text, size_pt=size_pt, latin=latin,
-                                          ea=ea, algn=algn)])
+    _fill_textbox(sp_el, [_styled_paragraph(text, style, tokens, algn=algn)])
 
 
 # ---------------------------------------------------------------------------
-# images (deck-referenced material files) and captions
+# images (deck-referenced material files), hairline, and captions
 # ---------------------------------------------------------------------------
 
-CAPTION_STRIP_HEIGHT_IN = 0.25  # overlay strip height inside the owning slot
+
+def _is_white_backgrounded(image_path: Path) -> bool:
+    """True when the image's border is uniformly near-white (screenshot look).
+    Degrades to False without PIL: no hairline rather than a wrong one."""
+    try:
+        from PIL import Image
+    except ImportError:
+        return False
+    try:
+        with Image.open(image_path) as im:
+            rgb = im.convert("RGB")
+            w, h = rgb.size
+            points = [(0, 0), (w - 1, 0), (0, h - 1), (w - 1, h - 1),
+                      (w // 2, 0), (w // 2, h - 1), (0, h // 2), (w - 1, h // 2)]
+            return all(min(rgb.getpixel(p)) >= 245 for p in points)
+    except Exception:  # unreadable image: the fit already failed if corrupt
+        return False
 
 
-def _add_fitted_picture(slide, image_path: Path, slot: dict):
+def _apply_hairline(pic, image_path: Path, tokens: dict) -> None:
+    """White-background screenshots get the image.hairline token so they do
+    not dissolve into the white page; photos/dark images get nothing."""
+    hair = tokens.get("image", {}).get("hairline")
+    if not hair or not _is_white_backgrounded(image_path):
+        return
+    pic.line.color.rgb = RGBColor.from_string(_srgb_val(hair["color"]))
+    pic.line.width = Pt(float(hair["width_pt"]))
+
+
+def _add_fitted_picture(slide, image_path: Path, slot: dict, tokens: dict):
     """Contain-fit an image into a manifest slot: aspect kept, centered."""
     image_path = Path(image_path)
     if not image_path.is_file():
@@ -352,22 +479,46 @@ def _add_fitted_picture(slide, image_path: Path, slot: dict):
         pic.height = slot_h
     pic.left = int(left + (slot_w - pic.width) / 2)
     pic.top = int(top + (slot_h - pic.height) / 2)
+    _apply_hairline(pic, image_path, tokens)
     return pic
 
 
-def _add_caption(slide_el, slot: dict, text: str, manifest: dict, index: int) -> None:
-    """10pt overlay strip pinned to the slot's internal bottom edge."""
-    cap = manifest["typography"]["caption"]
+def _scrim_fill_xml(scrim: dict) -> str:
+    return (f'<a:solidFill><a:srgbClr val="{_srgb_val(scrim["color"])}">'
+            f'<a:alpha val="{int(scrim["alpha_pct"] * 1000)}"/></a:srgbClr>'
+            f"</a:solidFill>")
+
+
+def _caption_strip_height_in(tokens: dict, caption_role: str) -> float:
+    """One caption line at single spacing (PowerPoint renders spcPct 100% as
+    1.2em — measured, scripts/measure_line_pitch.py) plus both v-insets."""
+    size_pt = tokens["roles"][caption_role]["size_pt"]
+    return size_pt * 1.2 / 72 + 2 * float(tokens["spacing"]["textbox_inset_v_in"])
+
+
+def _add_caption(slide_el, pic, text: str, tokens: dict, archetype: str,
+                 index: int) -> None:
+    """White-on-black-scrim strip over the fitted picture's bottom edge.
+
+    The caption role (text style + scrim) resolves through the owning
+    archetype's role_binding. The strip hugs the fitted image, not the slot:
+    a contain-fitted picture may be narrower/shorter than its slot, and a
+    scrim floating past the image edges (or below a width-bound image)
+    reads as a defect.
+    """
+    role_name = _region_role_name(tokens, archetype, "caption")
+    style = _role_style(tokens, role_name)
+    strip_h = _caption_strip_height_in(tokens, role_name)
     strip = {
-        "x": slot["x"],
-        "y": slot["y"] + slot["h"] - CAPTION_STRIP_HEIGHT_IN,
-        "w": slot["w"],
-        "h": CAPTION_STRIP_HEIGHT_IN,
+        "x": pic.left.inches,
+        "y": pic.top.inches + pic.height.inches - strip_h,
+        "w": pic.width.inches,
+        "h": strip_h,
     }
-    box = _textbox_shape(f"Caption{index}", strip, _next_shape_id(slide_el))
-    _fill_textbox(box, [_text_paragraph(text, size_pt=cap["size_pt"],
-                                        latin=cap["face"], ea=cap["face"],
-                                        algn="ctr")])
+    scrim = tokens["roles"][role_name]["scrim"]
+    box = _textbox_shape(f"Caption{index}", strip, _next_shape_id(slide_el),
+                         tokens, anchor="ctr", fill_xml=_scrim_fill_xml(scrim))
+    _fill_textbox(box, [_styled_paragraph(text, style, tokens, algn="ctr")])
     _sp_tree(slide_el).append(box)
 
 
@@ -428,13 +579,6 @@ def _delete_leading_slides(prs, count: int) -> None:
 # archetype fillers
 # ---------------------------------------------------------------------------
 
-def _title_size_pt(text: str, manifest: dict) -> int:
-    t = manifest["typography"]["title"]
-    if vd.text_width(text) > t["long_title_over_chars"]:
-        return t["long_title_size_pt"]
-    return t["size_pt"]
-
-
 def _page_texts(page: dict) -> list[str]:
     return [b["text"] for b in page["blocks"] if b["type"] == "text"]
 
@@ -443,7 +587,7 @@ def _page_title(page: dict) -> str:
     return next(b["text"] for b in page["blocks"] if b["type"] == "title")
 
 
-def _fill_title(slide_el, page: dict, arch: dict, manifest: dict, archetype: str,
+def _fill_title(slide_el, page: dict, arch: dict, tokens: dict, archetype: str,
                 algn: str | None = None) -> None:
     """Fill the title placeholder of a cloned slide at the manifest region."""
     title_text = _page_title(page)
@@ -451,37 +595,37 @@ def _fill_title(slide_el, page: dict, arch: dict, manifest: dict, archetype: str
     if title is None:
         raise RenderError(f"{archetype} clone lost its title placeholder")
     _set_position(title, arch["regions"]["title"])
-    _fill_placeholder(title, title_text, size_pt=_title_size_pt(title_text, manifest),
-                      latin=manifest["typography"]["title"]["latin"],
-                      ea=manifest["typography"]["title"]["face"], algn=algn)
+    _fill_placeholder(title, title_text,
+                      _title_style(title_text, tokens, archetype),
+                      tokens, algn=algn)
 
 
 def fill_cover(slide, page: dict, arch: dict, manifest: dict) -> None:
     el = slide.part._element
-    sub = manifest["typography"]["cover_subtitle"]
+    tokens = _tokens(manifest)
     text = " ".join(_page_texts(page))
 
     _strip_content_shapes(el)
-    _fill_title(el, page, arch, manifest, "cover", algn="ctr")
+    _fill_title(el, page, arch, tokens, "cover", algn="ctr")
     subtitle = find_placeholder(el, "body")
     if subtitle is None:
         raise RenderError("cover clone lost its subtitle placeholder")
     _set_position(subtitle, arch["regions"]["subtitle"])
-    _fill_placeholder(subtitle, text, size_pt=sub["size_pt"], latin=sub["latin"],
-                      ea=sub["face"], algn="ctr")
+    _fill_placeholder(subtitle, text, _region_role(tokens, "cover", "subtitle"),
+                      tokens, algn="ctr")
 
 
 def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
                       xsl_path: Path | None, stats) -> None:
     el = slide.part._element
+    tokens = _tokens(manifest)
     formulas = [b["latex"] for b in page["blocks"] if b["type"] == "formula"]
     texts = _page_texts(page)
-    accent = manifest["typography"]["accent"]
-    body = manifest["typography"]["body"]
-    formula_type = manifest["typography"]["formula"]
+    formula_size = tokens["roles"]["formula"]["size_pt"]
+    body_style = _region_role(tokens, "text-formula", "text")
 
     _strip_content_shapes(el)
-    _fill_title(el, page, arch, manifest, "text-formula")
+    _fill_title(el, page, arch, tokens, "text-formula")
 
     # formula area: native OMML paragraphs, image fallbacks stacked below
     native, fallbacks = [], []
@@ -490,14 +634,14 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
         if omml is None:
             fallbacks.append(latex)
         else:
-            _style_math_runs(omml, formula_type["size_pt"])
+            _style_math_runs(omml, formula_size)
             native.append(_math_paragraph(omml))
     stats.formulas_native += len(native)
     stats.formulas_fallback += len(fallbacks)
 
     if native:
         box = _textbox_shape("FormulaArea", arch["regions"]["formula"],
-                             _next_shape_id(el))
+                             _next_shape_id(el), tokens)
         _fill_textbox(box, native)
         _sp_tree(el).append(box)
     # Fallback images live in the formula region's usable band: clamped above
@@ -519,20 +663,14 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
         pic.left = int(Inches(region["x"]) + (Inches(region["w"]) - pic.width) / 2)
 
     if texts:
-        if formulas:
-            region, latin, face, size = (arch["regions"]["text"], accent["face"],
-                                         accent["face"], accent["size_pt"])
-            paras = [_text_paragraph(t, size_pt=size, latin=latin, ea=face)
-                     for t in texts]
-        else:
-            # 纯文字页（text_full）：模板 slide 21 实测手法——150% 行距 + 段前 12pt
-            region, latin, face, size = (arch["regions"]["text_full"], body["face"],
-                                         body["face"], body["size_pt"])
-            paras = [_text_paragraph(t, size_pt=size, latin=latin, ea=face,
-                                     ln_pct=150, spc_bef_pt=12)
-                     for t in texts]
+        # role_bindings map both text and text_full to the body role; the
+        # region (and box name) depends on whether formulas share the page
+        region = arch["regions"]["text"] if formulas else arch["regions"]["text_full"]
+        paras = [_styled_paragraph(t, body_style, tokens, rhythm=True,
+                                   emphasis=True)
+                 for t in texts]
         box = _textbox_shape("TextArea" if formulas else "TextFullArea",
-                             region, _next_shape_id(el))
+                             region, _next_shape_id(el), tokens)
         _fill_textbox(box, paras)
         _sp_tree(el).append(box)
 
@@ -545,22 +683,23 @@ def fill_agenda(slide, page: dict, arch: dict, manifest: dict) -> None:
     the centered label box instead.
     """
     el = slide.part._element
+    tokens = _tokens(manifest)
     label_text = _page_title(page)
     items = [item for b in page["blocks"] if b["type"] == "list" for item in b["items"]]
-    label_type = manifest["typography"]["agenda_label"]
-    list_type = manifest["typography"]["agenda_list"]
+    label_style = _region_role(tokens, "agenda", "label")
+    list_style = _region_role(tokens, "agenda", "list")
 
     _strip_content_shapes(el)
     label = _textbox_shape("AgendaLabel", arch["regions"]["label"],
-                           _next_shape_id(el), anchor="ctr")
-    _fill_textbox(label, [_text_paragraph(label_text, size_pt=label_type["size_pt"],
-                                          latin=label_type["face"],
-                                          ea=label_type["face"], algn="ctr")])
+                           _next_shape_id(el), tokens, anchor="ctr")
+    _fill_textbox(label, [_styled_paragraph(label_text, label_style, tokens,
+                                            algn="ctr")])
     _sp_tree(el).append(label)
     if items:  # a list block is optional; never emit an empty txBody
-        box = _textbox_shape("AgendaList", arch["regions"]["list"], _next_shape_id(el))
-        _fill_textbox(box, [_text_paragraph(item, size_pt=list_type["size_pt"],
-                                            latin=list_type["face"], ea=list_type["face"])
+        box = _textbox_shape("AgendaList", arch["regions"]["list"],
+                             _next_shape_id(el), tokens)
+        _fill_textbox(box, [_styled_paragraph(item, list_style, tokens,
+                                              rhythm=True, emphasis=True)
                             for item in items])
         _sp_tree(el).append(box)
 
@@ -568,32 +707,32 @@ def fill_agenda(slide, page: dict, arch: dict, manifest: dict) -> None:
 def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
                     image_root: Path | None) -> None:
     el = slide.part._element
+    tokens = _tokens(manifest)
     subhead = next((b["text"] for b in page["blocks"] if b["type"] == "subhead"), None)
-    body = manifest["typography"]["body"]
+    subhead_style = _region_role(tokens, "text-image", "subhead")
+    text_style = _region_role(tokens, "text-image", "text")
 
     _strip_content_shapes(el)
-    _fill_title(el, page, arch, manifest, "text-image")
+    _fill_title(el, page, arch, tokens, "text-image")
 
     if subhead is not None:
         box = _textbox_shape("SubheadArea", arch["regions"]["subhead"],
-                             _next_shape_id(el))
-        _fill_textbox(box, [_text_paragraph(subhead,
-                                            size_pt=manifest["typography"]["subhead_size_pt"],
-                                            latin=body["face"], ea=body["face"])])
+                             _next_shape_id(el), tokens)
+        _fill_textbox(box, [_styled_paragraph(subhead, subhead_style, tokens)])
         _sp_tree(el).append(box)
 
     # text blocks and list items share the text region; the template author
     # writes bullet lines as "- " paragraphs in that box (slide 7)
-    size = body["secondary_size_pt"]
     paragraphs = []
     for b in page["blocks"]:
         if b["type"] == "text":
-            paragraphs.append(_text_paragraph(b["text"], size_pt=size,
-                                              latin=body["face"], ea=body["face"]))
+            paragraphs.append(_styled_paragraph(b["text"], text_style, tokens,
+                                                rhythm=True, emphasis=True))
         elif b["type"] == "list":
             for item in b["items"]:
-                paragraphs.append(_text_paragraph(f"- {item}", size_pt=size,
-                                                  latin=body["face"], ea=body["face"]))
+                paragraphs.append(_styled_paragraph(f"- {item}", text_style,
+                                                    tokens, rhythm=True,
+                                                    emphasis=True))
 
     images = [b for b in page["blocks"] if b["type"] == "image"]
     # 单图变体：左文右图整版（设计布局，非模板原框）——图占右栏大区，
@@ -602,17 +741,20 @@ def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
     if single:
         if paragraphs:
             box = _textbox_shape("TextColumn", arch["regions"]["text_column"],
-                                 _next_shape_id(el))
+                                 _next_shape_id(el), tokens)
             _fill_textbox(box, paragraphs)
             _sp_tree(el).append(box)
         slot = arch["regions"]["image_primary"]
-        _add_fitted_picture(slide, vd.resolve_image_path(images[0]["path"], image_root), slot)
+        pic = _add_fitted_picture(
+            slide, vd.resolve_image_path(images[0]["path"], image_root),
+            slot, tokens)
         if images[0].get("caption"):
-            _add_caption(el, slot, images[0]["caption"], manifest, 1)
+            _add_caption(el, pic, images[0]["caption"], tokens, "text-image", 1)
         return
 
     if paragraphs:
-        box = _textbox_shape("TextArea", arch["regions"]["text"], _next_shape_id(el))
+        box = _textbox_shape("TextArea", arch["regions"]["text"], _next_shape_id(el),
+                             tokens)
         _fill_textbox(box, paragraphs)
         _sp_tree(el).append(box)
 
@@ -622,31 +764,34 @@ def fill_text_image(slide, page: dict, arch: dict, manifest: dict,
             f"text-image page carries {len(images)} images but the manifest has "
             f"only {len(slots)} image slots")
     for i, block in enumerate(images):
-        _add_fitted_picture(slide, vd.resolve_image_path(block["path"], image_root), slots[i])
+        pic = _add_fitted_picture(
+            slide, vd.resolve_image_path(block["path"], image_root),
+            slots[i], tokens)
         if block.get("caption"):
-            _add_caption(el, slots[i], block["caption"], manifest, i + 1)
+            _add_caption(el, pic, block["caption"], tokens, "text-image", i + 1)
 
 
 def fill_chart_focus(slide, page: dict, arch: dict, manifest: dict,
                      image_root: Path | None) -> None:
     el = slide.part._element
+    tokens = _tokens(manifest)
     texts = _page_texts(page)
     images = [b for b in page["blocks"] if b["type"] == "image"]
-    body = manifest["typography"]["body"]
+    comment_style = _region_role(tokens, "chart-focus", "comment")
 
     _strip_content_shapes(el)
-    _fill_title(el, page, arch, manifest, "chart-focus")
+    _fill_title(el, page, arch, tokens, "chart-focus")
 
     if len(images) != 1:
         raise RenderError(f"chart-focus expects exactly 1 image block, got {len(images)}")
     _add_fitted_picture(slide, vd.resolve_image_path(images[0]["path"], image_root),
-                        arch["regions"]["chart"])
+                        arch["regions"]["chart"], tokens)
 
     if texts:
         box = _textbox_shape("CommentArea", arch["regions"]["comment"],
-                             _next_shape_id(el))
-        _fill_textbox(box, [_text_paragraph(t, size_pt=body["secondary_size_pt"],
-                                            latin=body["face"], ea=body["face"])
+                             _next_shape_id(el), tokens)
+        _fill_textbox(box, [_styled_paragraph(t, comment_style, tokens,
+                                              rhythm=True, emphasis=True)
                             for t in texts])
         _sp_tree(el).append(box)
 
@@ -721,7 +866,10 @@ def render_deck(deck: dict, manifest: dict, template_pptx: Path,
 
     _delete_leading_slides(prs, original_count)
 
-    # font embedding (manifest fonts.embed; degrade with warning, never fail)
+    # font embedding (manifest fonts.embed; degrade with warning, never fail).
+    # Characters are collected raw: emphasis markers stay in because literal
+    # roles (caption, title) render them verbatim — a superset subset costs a
+    # byte, an under-subset breaks machines without the font.
     embed_cfg = manifest.get("fonts", {}).get("embed")
     if embed_cfg:
         base = Path(template_pptx).parent

@@ -72,7 +72,10 @@ WEIGHT_ELEMENTS = {"regular": "p:regular", "bold": "p:bold"}
 
 def collect_deck_characters(deck: dict) -> set[str]:
     """Every character a rendered run can carry: block text/captions, list
-    items, plus the renderer-synthesized list marker and page-number digits."""
+    items, plus the renderer-synthesized list marker and page-number digits.
+    Text is collected raw — emphasis **markers** stay in because the literal
+    roles (caption, title) render them verbatim; a superset subset costs a
+    byte, an under-subset breaks machines without the font."""
     chars = set(SYNTHESIZED_CHARS)
     for page in deck.get("pages", []):
         for block in page.get("blocks", []):
