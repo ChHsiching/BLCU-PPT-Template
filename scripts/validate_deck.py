@@ -59,6 +59,7 @@ BUDGET_KEYS = (
     "text_blocks_max",
     "text_block_max_chars",
     "text_total_max_chars",
+    "text_total_max_chars_full",  # 可选：无公式页（text_full 区）的放宽总上限
     "subhead_max_chars",
     "list_items_max",
     "list_item_max_chars",
@@ -214,8 +215,10 @@ def _validate_page(page, page_i: int, manifest: dict, image_root: Path, findings
         return
 
     budget = arch.get("budget")
-    if not isinstance(budget, dict) or any(key not in budget for key in BUDGET_KEYS):
-        missing = [key for key in BUDGET_KEYS if not isinstance(budget, dict) or key not in budget]
+    optional_keys = {"text_total_max_chars_full"}
+    required = [key for key in BUDGET_KEYS if key not in optional_keys]
+    if not isinstance(budget, dict) or any(key not in budget for key in required):
+        missing = [key for key in required if not isinstance(budget, dict) or key not in budget]
         for key in missing:
             findings.append(
                 Finding(
@@ -305,11 +308,19 @@ def _check_budgets(records: dict, ppath: str, archetype: str, budget: dict, find
             findings.append(Finding(ppath, "budget.text_blocks_count", f"text blocks not allowed on this archetype (text_blocks_max 0, {archetype})"))
         else:
             findings.append(Finding(ppath, "budget.text_blocks_count", f"{n_text} text blocks > text_blocks_max {budget['text_blocks_max']} ({archetype})"))
+    # 无公式时文字落入更高的全高/主文字区（如 text-formula 的 text_full），
+    # manifest 可声明 text_total_max_chars_full 放宽块与总量上限
+    full_cap = budget["text_total_max_chars_full"] if (
+        not records["formula"] and "text_total_max_chars_full" in budget
+    ) else None
+    block_limit = budget["text_block_max_chars"] if full_cap is None else max(
+        budget["text_block_max_chars"], full_cap)
+    total_limit = budget["text_total_max_chars"] if full_cap is None else max(
+        budget["text_total_max_chars"], full_cap)
     for bpath, block in records["text"]:
         w = text_width(block["text"])
-        limit = budget["text_block_max_chars"]
-        if w > limit + EPS:
-            findings.append(Finding(bpath, "budget.text_block_chars", f"text width {fmt_width(w)} > text_block_max_chars {limit} ({archetype})"))
+        if w > block_limit + EPS:
+            findings.append(Finding(bpath, "budget.text_block_chars", f"text width {fmt_width(w)} > text_block_max_chars {block_limit} ({archetype})"))
 
     for bpath, block in records["subhead"]:
         w = text_width(block["text"])
@@ -358,12 +369,12 @@ def _check_budgets(records: dict, ppath: str, archetype: str, budget: dict, find
     ) + sum(
         text_width(item) for _, block in records["list"] for item in block["items"]
     )
-    if total > budget["text_total_max_chars"] + EPS:
+    if total > total_limit + EPS:
         findings.append(
             Finding(
                 ppath,
                 "budget.text_total_chars",
-                f"text_total {fmt_width(total)} > text_total_max_chars {budget['text_total_max_chars']} ({archetype}; subhead + text blocks + list items)",
+                f"text_total {fmt_width(total)} > text_total_max_chars {total_limit} ({archetype}; subhead + text blocks + list items)",
             )
         )
 

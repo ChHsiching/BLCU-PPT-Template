@@ -119,10 +119,11 @@ def test_catches_placeholder_residue(tmp_path):
 
 def test_catches_over_budget_deck(tmp_path):
     # rendered through the API, bypassing the CLI's validation gate: the QA
-    # revalidation is what must flag it
+    # revalidation is what must flag it（超限量从 manifest 读取，预算重校准后随动）
     deck = absolutize_images(load(FULL_DECK))
-    deck["pages"][2]["blocks"].append({"type": "text", "text": "超" * 140})
     manifest = load(MANIFEST_PATH)
+    cap = manifest["archetypes"][deck["pages"][2]["archetype"]]["budget"]["text_total_max_chars"]
+    deck["pages"][2]["blocks"].append({"type": "text", "text": "超" * (cap + 1)})
     result = rp.render_deck(deck, manifest, TEMPLATE_PPTX, image_root=FIXTURE_DIR)
     out = tmp_path / "over.pptx"
     result.presentation.save(out)

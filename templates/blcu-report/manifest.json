@@ -4,50 +4,127 @@
   "source_pptx": "blcu-report.pptx",
   "source_pptx_note": "原件永不入库（gitignored）；本文件与 extracted/ 为入库衍生物，由 scripts/extract_template.py 复现",
   "units": "in",
-  "slide_size": { "w": 13.33, "h": 7.5 },
+  "slide_size": {
+    "w": 13.33,
+    "h": 7.5
+  },
   "safe_canvas": {
     "content_bottom_y": 6.9,
     "note": "文本类 region 底边不得越过 content_bottom_y（给页码区留位）。page_number 占位符与图片为例外：图片只受画布 13.33×7.5 约束，且避开页码框矩形（x 11.96–12.59 且 y 6.82–7.5）"
   },
   "typography": {
-    "title": { "face": "华文中宋", "latin": "Times New Roman", "size_pt": 44, "long_title_size_pt": 28, "long_title_over_chars": 15 },
-    "cover_subtitle": { "face": "华文中宋", "latin": "Times New Roman", "size_pt": 24 },
-    "body": { "face": "黑体", "size_pt": 20, "secondary_size_pt": 18 },
-    "accent": { "face": "楷体", "size_pt": 20 },
+    "title": {
+      "face": "华文中宋",
+      "latin": "Times New Roman",
+      "size_pt": 44,
+      "long_title_size_pt": 28,
+      "long_title_over_chars": 15
+    },
+    "cover_subtitle": {
+      "face": "华文中宋",
+      "latin": "Times New Roman",
+      "size_pt": 24
+    },
+    "body": {
+      "face": "黑体",
+      "size_pt": 20,
+      "secondary_size_pt": 18
+    },
+    "accent": {
+      "face": "楷体",
+      "size_pt": 20
+    },
     "subhead_size_pt": 28,
-    "agenda_label": { "face": "黑体", "size_pt": 48 },
-    "agenda_list": { "face": "黑体", "size_pt": 24 },
-    "caption": { "face": "Calibri", "size_pt": 10 },
-    "formula": { "face": "Cambria Math", "size_pt": 22 },
-    "page_number": { "face": "华文中宋", "latin": "Times New Roman", "size_pt": 15 },
-    "web_fallbacks": { "黑体": ["SimHei", "Noto Sans SC"], "华文中宋": ["STZhongsong", "Noto Serif SC"], "楷体": ["KaiTi", "Noto Serif SC"] }
+    "agenda_label": {
+      "face": "黑体",
+      "size_pt": 48
+    },
+    "agenda_list": {
+      "face": "黑体",
+      "size_pt": 24
+    },
+    "caption": {
+      "face": "Calibri",
+      "size_pt": 10
+    },
+    "formula": {
+      "face": "Cambria Math",
+      "size_pt": 22
+    },
+    "page_number": {
+      "face": "华文中宋",
+      "latin": "Times New Roman",
+      "size_pt": 15
+    },
+    "web_fallbacks": {
+      "黑体": [
+        "SimHei",
+        "Noto Sans SC"
+      ],
+      "华文中宋": [
+        "STZhongsong",
+        "Noto Serif SC"
+      ],
+      "楷体": [
+        "KaiTi",
+        "Noto Serif SC"
+      ]
+    }
   },
-  "colors": { "text": "#000000", "background": "#FFFFFF", "detail_ref": "extracted/colors.json" },
+  "colors": {
+    "text": "#000000",
+    "background": "#FFFFFF",
+    "detail_ref": "extracted/colors.json"
+  },
   "brand_media_ref": "extracted/media.json",
   "budget_semantics": {
     "chars": "字数按 CJK 等宽计（半角字符计 0.5）；容量核定扣除文本框内边距（左右各 0.1in）",
     "title_max_chars": "页标题/标签字段长度上限",
     "text_blocks_max": "正文文本块个数上限（不含小标题块，小标题由 subhead_max_chars 单独约束）",
     "text_block_max_chars": "单个文本块字数上限",
-    "text_total_max_chars": "同页小标题 + 全部文本块 + 列表项字数之和的上限——物理容量主约束，按 region 扣除内边距后的可用尺寸与声明字号的最坏情况核定",
+    "text_total_max_chars": "同页小标题 + 全部文本块 + 列表项字数之和的上限，按 region 扣内边距后的物理排字容量 × 0.85 安全系数核定（0.85：PowerPoint 实际换行早于理想排字、中英混排宽度波动）",
     "subhead_max_chars": "小标题块字数上限（单行 @subhead_size_pt；无小标题区的页型为 0）",
     "list_items_max / list_item_max_chars": "列表条数 / 单条字数上限（条目字数计入 text_total）",
     "formulas_max": "显示公式个数上限",
     "images_min / images_max": "图片数量下/上限",
-    "caption_max_chars": "单条图注字数上限；图注渲染为所属图位内部底边的叠加条，不占用图位外空间"
+    "caption_max_chars": "单条图注字数上限；图注渲染为所属图位内部底边的叠加条，不占用图位外空间",
+    "text_total_max_chars_full": "可选：页面无公式块（文字落入全高/主文字区）时放宽块与总量上限到该值"
   },
   "common_regions": {
-    "title": { "x": 0.74, "y": 0.0, "w": 11.86, "h": 1.11 },
-    "page_number": { "x": 11.96, "y": 6.82, "w": 0.63, "h": 0.68 }
+    "title": {
+      "x": 0.74,
+      "y": 0.0,
+      "w": 11.86,
+      "h": 1.11
+    },
+    "page_number": {
+      "x": 11.96,
+      "y": 6.82,
+      "w": 0.63,
+      "h": 0.68
+    }
   },
   "archetypes": {
     "cover": {
       "purpose": "封面：主标题 + 汇报人（/日期）行",
-      "clone": { "slide": 1, "layout": "三logo标题页" },
+      "clone": {
+        "slide": 1,
+        "layout": "三logo标题页"
+      },
       "evidence": "slide 1；副标题行由实测 4.61in 加宽至 6.0in 居中，容纳「汇报人:姓名 日期」单行",
       "regions": {
-        "title": { "x": 0.0, "y": 2.67, "w": 13.33, "h": 1.93 },
-        "subtitle": { "x": 3.67, "y": 5.87, "w": 6.0, "h": 0.62 }
+        "title": {
+          "x": 0.0,
+          "y": 2.67,
+          "w": 13.33,
+          "h": 1.93
+        },
+        "subtitle": {
+          "x": 3.67,
+          "y": 5.87,
+          "w": 6.0,
+          "h": 0.62
+        }
       },
       "budget": {
         "title_max_chars": 16,
@@ -65,18 +142,37 @@
     },
     "agenda": {
       "purpose": "目录/总览：居中主题标签 + 分节列表",
-      "clone": { "slide": 2, "layout": "标题和内容", "geometry_fix": "原页两框超界，克隆时按本 regions 安全几何重建" },
+      "clone": {
+        "slide": 2,
+        "layout": "标题和内容",
+        "geometry_fix": "原页两框超界，克隆时按本 regions 安全几何重建"
+      },
       "evidence": "slide 2（原页实测 label=(5.0,-0.03,3.5,2.03) 上越界、list=(0.75,1.6,11.25,8.4) 下越界 2.5in；下方 regions 为修正后安全值；label 原页字体为 Arial@48pt 且未设 ea 字面，规范化为黑体 48pt）",
       "regions": {
-        "label": { "x": 5.0, "y": 0.5, "w": 3.5, "h": 1.0 },
-        "list": { "x": 0.75, "y": 1.6, "w": 11.25, "h": 5.2 },
-        "page_number": { "x": 11.96, "y": 6.82, "w": 0.63, "h": 0.68 }
+        "label": {
+          "x": 5.0,
+          "y": 0.5,
+          "w": 3.5,
+          "h": 1.0
+        },
+        "list": {
+          "x": 0.75,
+          "y": 1.6,
+          "w": 11.25,
+          "h": 5.2
+        },
+        "page_number": {
+          "x": 11.96,
+          "y": 6.82,
+          "w": 0.63,
+          "h": 0.68
+        }
       },
       "budget": {
         "title_max_chars": 4,
         "text_blocks_max": 0,
         "text_block_max_chars": 0,
-        "text_total_max_chars": 180,
+        "text_total_max_chars": 359,
         "subhead_max_chars": 0,
         "list_items_max": 6,
         "list_item_max_chars": 30,
@@ -88,50 +184,122 @@
     },
     "text-formula": {
       "purpose": "文字 + 原生 OMML 公式页；公式为 0 时即纯文字页",
-      "clone": { "slide": 3, "layout": "标题和内容" },
+      "clone": {
+        "slide": 3,
+        "layout": "标题和内容"
+      },
       "evidence": "slide 3（公式区 Rectangle 2 + 楷体文字区 文本框 3，实测单块 117 字；文字区高度由实测 1.78in 下延至 2.2in——原页该区下方为留白，底边 6.52 仍在安全线内）；公式密集变体见 slide 12/13；text_full 取自 slide 11 实测全高文字框（x 由实测 0.35 归一到标题列 0.74）",
       "regions": {
-        "title": { "x": 0.74, "y": 0.0, "w": 11.86, "h": 1.11 },
-        "formula": { "x": 2.37, "y": 1.5, "w": 10.38, "h": 3.47 },
-        "text": { "x": 1.11, "y": 4.32, "w": 10.96, "h": 2.2 },
-        "text_full": { "x": 0.74, "y": 1.11, "w": 11.86, "h": 5.58 },
-        "page_number": { "x": 11.96, "y": 6.82, "w": 0.63, "h": 0.68 }
+        "title": {
+          "x": 0.74,
+          "y": 0.0,
+          "w": 11.86,
+          "h": 1.11
+        },
+        "formula": {
+          "x": 2.37,
+          "y": 1.5,
+          "w": 10.38,
+          "h": 3.47
+        },
+        "text": {
+          "x": 1.11,
+          "y": 4.32,
+          "w": 10.96,
+          "h": 2.2
+        },
+        "text_full": {
+          "x": 0.74,
+          "y": 1.11,
+          "w": 11.86,
+          "h": 5.58
+        },
+        "page_number": {
+          "x": 11.96,
+          "y": 6.82,
+          "w": 0.63,
+          "h": 0.68
+        }
       },
       "budget": {
         "title_max_chars": 25,
         "text_blocks_max": 2,
-        "text_block_max_chars": 130,
-        "text_total_max_chars": 150,
+        "text_block_max_chars": 207,
+        "text_total_max_chars": 207,
         "subhead_max_chars": 0,
         "list_items_max": 0,
         "list_item_max_chars": 0,
         "formulas_max": 6,
         "images_min": 0,
         "images_max": 0,
-        "caption_max_chars": 0
+        "caption_max_chars": 0,
+        "text_total_max_chars_full": 586
       }
     },
     "text-image": {
       "purpose": "图文混排：小标题 + 文字块 + 1–4 张浮动图（可带图注）",
-      "clone": { "slide": 7, "layout": "标题和内容" },
+      "clone": {
+        "slide": 7,
+        "layout": "标题和内容"
+      },
       "evidence": "slide 7（小标题 Rectangle 49 + 文字 Rectangle 51 + 4 图位；小标题框收窄为左列 5.9in 单行（右缘避开图位 2/3），文字区高度由实测 1.54in 下延至 2.5in——原页该区下方为留白，右缘 8.66 不及 slot[3] 左缘 8.78）；双图变体见 slide 9",
       "regions": {
-        "title": { "x": 0.74, "y": 0.0, "w": 11.86, "h": 1.11 },
-        "subhead": { "x": 0.75, "y": 1.5, "w": 5.9, "h": 0.7 },
-        "text": { "x": 0.5, "y": 4.2, "w": 8.16, "h": 2.5 },
+        "title": {
+          "x": 0.74,
+          "y": 0.0,
+          "w": 11.86,
+          "h": 1.11
+        },
+        "subhead": {
+          "x": 0.75,
+          "y": 1.5,
+          "w": 5.9,
+          "h": 0.7
+        },
+        "text": {
+          "x": 0.5,
+          "y": 4.2,
+          "w": 8.16,
+          "h": 2.5
+        },
         "image_slots": [
-          { "x": 0.74, "y": 2.29, "w": 5.65, "h": 1.58 },
-          { "x": 6.75, "y": 1.51, "w": 3.14, "h": 2.28 },
-          { "x": 10.0, "y": 1.65, "w": 2.25, "h": 2.1 },
-          { "x": 8.78, "y": 4.2, "w": 2.88, "h": 2.73 }
+          {
+            "x": 0.74,
+            "y": 2.29,
+            "w": 5.65,
+            "h": 1.58
+          },
+          {
+            "x": 6.75,
+            "y": 1.51,
+            "w": 3.14,
+            "h": 2.28
+          },
+          {
+            "x": 10.0,
+            "y": 1.65,
+            "w": 2.25,
+            "h": 2.1
+          },
+          {
+            "x": 8.78,
+            "y": 4.2,
+            "w": 2.88,
+            "h": 2.73
+          }
         ],
-        "page_number": { "x": 11.96, "y": 6.82, "w": 0.63, "h": 0.68 }
+        "page_number": {
+          "x": 11.96,
+          "y": 6.82,
+          "w": 0.63,
+          "h": 0.68
+        }
       },
       "budget": {
         "title_max_chars": 25,
         "text_blocks_max": 1,
-        "text_block_max_chars": 110,
-        "text_total_max_chars": 120,
+        "text_block_max_chars": 216,
+        "text_total_max_chars": 216,
         "subhead_max_chars": 14,
         "list_items_max": 4,
         "list_item_max_chars": 31,
@@ -143,19 +311,43 @@
     },
     "chart-focus": {
       "purpose": "图表主导页：一张大图 + 侧评注（评注用 body.secondary_size_pt）",
-      "clone": { "slide": 18, "layout": "标题和内容", "geometry_fix": "原页评注框 (11.18,2.59,3.28,2.22) 右越界 1.13in，克隆时按本 regions 安全几何重建" },
+      "clone": {
+        "slide": 18,
+        "layout": "标题和内容",
+        "geometry_fix": "原页评注框 (11.18,2.59,3.28,2.22) 右越界 1.13in，克隆时按本 regions 安全几何重建"
+      },
       "evidence": "slide 18（图 10.02×5.32 + 侧评注框）；原页评注框右越界，chart 亦收窄 0.42in 让位",
       "regions": {
-        "title": { "x": 0.74, "y": 0.0, "w": 11.86, "h": 1.11 },
-        "chart": { "x": 0.95, "y": 1.6, "w": 9.6, "h": 5.3 },
-        "comment": { "x": 10.7, "y": 2.0, "w": 2.5, "h": 2.4 },
-        "page_number": { "x": 11.96, "y": 6.82, "w": 0.63, "h": 0.68 }
+        "title": {
+          "x": 0.74,
+          "y": 0.0,
+          "w": 11.86,
+          "h": 1.11
+        },
+        "chart": {
+          "x": 0.95,
+          "y": 1.6,
+          "w": 9.6,
+          "h": 5.3
+        },
+        "comment": {
+          "x": 10.7,
+          "y": 2.0,
+          "w": 2.5,
+          "h": 2.4
+        },
+        "page_number": {
+          "x": 11.96,
+          "y": 6.82,
+          "w": 0.63,
+          "h": 0.68
+        }
       },
       "budget": {
         "title_max_chars": 25,
         "text_blocks_max": 1,
-        "text_block_max_chars": 60,
-        "text_total_max_chars": 60,
+        "text_block_max_chars": 59,
+        "text_total_max_chars": 59,
         "subhead_max_chars": 0,
         "list_items_max": 0,
         "list_item_max_chars": 0,
@@ -167,11 +359,25 @@
     },
     "closing": {
       "purpose": "结束页：致谢语（+ 可选汇报人行）；封面的内容变体",
-      "clone": { "slide": 1, "layout": "三logo标题页", "variant_of": "cover" },
+      "clone": {
+        "slide": 1,
+        "layout": "三logo标题页",
+        "variant_of": "cover"
+      },
       "evidence": "原 deck 无结束页；几何继承 cover（slide 1）",
       "regions": {
-        "title": { "x": 0.0, "y": 2.67, "w": 13.33, "h": 1.93 },
-        "subtitle": { "x": 3.67, "y": 5.87, "w": 6.0, "h": 0.62 }
+        "title": {
+          "x": 0.0,
+          "y": 2.67,
+          "w": 13.33,
+          "h": 1.93
+        },
+        "subtitle": {
+          "x": 3.67,
+          "y": 5.87,
+          "w": 6.0,
+          "h": 0.62
+        }
       },
       "budget": {
         "title_max_chars": 8,

@@ -21,6 +21,7 @@ import validate_deck as vd  # noqa: E402
 FIXTURE_DIR = REPO / "tests" / "fixtures"
 FIXTURE_DECK = FIXTURE_DIR / "deck.json"
 MANIFEST_PATH = REPO / "templates" / "blcu-report" / "manifest.json"
+BUDGETS = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))["archetypes"]
 SCRIPT = SCRIPTS_DIR / "validate_deck.py"
 
 
@@ -244,22 +245,45 @@ class TestBudgets:
         assert any(f.code == "budget.text_blocks_count" and f.path == "pages[3]" for f in findings)
 
     def test_text_block_over_chars(self):
-        # text-formula text_block_max_chars = 130
-        deck = over(3, 1, "text", "数" * 131)
+        # 含公式页（text 区）块上限从 manifest 读取
+        cap = BUDGETS["text-formula"]["budget"]["text_block_max_chars"]
+        deck, _ = load_fixture()
+        pi = 2  # 夹具第 3 页：含公式的 text-formula
+        deck["pages"][pi]["blocks"].append({"type": "text", "text": "数" * (cap + 1)})
         findings = validate(deck)
         f = next(f for f in findings if f.code == "budget.text_block_chars")
-        assert f.path == "pages[3].blocks[1]"
-        assert "text_block_max_chars" in f.message and "130" in f.message
+        assert f.path == f"pages[{pi}].blocks[4]"
+        assert "text_block_max_chars" in f.message and str(cap) in f.message
 
     def test_text_total_over_chars(self):
-        # two blocks of 110 chars each pass per-block limit (130) but exceed total (150)
+        # 含公式页：两块各自低于块上限、合计超总量上限（上限从 manifest 读取）
+        cap = BUDGETS["text-formula"]["budget"]["text_total_max_chars"]
         deck, _ = load_fixture()
-        deck["pages"][3]["blocks"][1]["text"] = "甲" * 110
-        deck["pages"][3]["blocks"][2]["text"] = "乙" * 110
+        pi = 2  # 夹具第 3 页：含公式的 text-formula（title + 2 公式 + 1 text）
+        each = cap // 2 + 1
+        deck["pages"][pi]["blocks"][3]["text"] = "甲" * each
+        deck["pages"][pi]["blocks"].append({"type": "text", "text": "乙" * each})
         findings = validate(deck)
         f = next(f for f in findings if f.code == "budget.text_total_chars")
-        assert f.path == "pages[3]"
-        assert "text_total_max_chars" in f.message and "150" in f.message
+        assert f.path == f"pages[{pi}]"
+        assert "text_total_max_chars" in f.message and str(cap) in f.message
+
+    def test_no_formula_page_uses_full_cap(self):
+        # 无公式页（text_full 区）允许放宽总量上限 text_total_max_chars_full
+        full = BUDGETS["text-formula"]["budget"]["text_total_max_chars_full"]
+        cap = BUDGETS["text-formula"]["budget"]["text_total_max_chars"]
+        assert full > cap
+        deck, _ = load_fixture()
+        # 取一个无公式的纯文字页（fixture 的纯文字变体页），塞入超过 cap 但低于 full 的文本
+        page = next(p for p in deck["pages"] if p["archetype"] == "text-formula"
+                    and not any(b["type"] == "formula" for b in p["blocks"]))
+        for b in page["blocks"]:
+            if b["type"] == "text":
+                b["text"] = ""
+        page["blocks"].append({"type": "text", "text": "丙" * (cap + 10)})
+        findings = validate(deck)
+        assert not any(f.code.startswith("budget.text") and f.path.endswith(
+            f"pages[{deck['pages'].index(page)}]") for f in findings)
 
     def test_text_block_forbidden_on_agenda(self):
         # agenda text_blocks_max = 0

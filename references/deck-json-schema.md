@@ -41,7 +41,7 @@ deck.json 是演示内容的中间表示与单一真相源（词汇表见 `CONTE
 
 ## 字数计算
 
-字数按 CJK 等宽计：East Asian W/F 字符计 1，其余（含半角标点、空格、数字）计 0.5。绑定关系：`title`/`subhead`/`text` 块与 `list` 条目、`caption` 分别对 `*_max_chars` 上限；**`text_total`** = 同页 subhead + 全部 text 块 + 全部 list 条目之和，是物理容量的主约束。`latex` 不计字数。个数约束：text 块数 / 列表条数 / 公式数 / 图片数对 `*_max`、`images_min`。
+字数按 CJK 等宽计：East Asian W/F 字符计 1，其余（含半角标点、空格、数字）计 0.5。绑定关系：`title`/`subhead`/`text` 块与 `list` 条目、`caption` 分别对 `*_max_chars` 上限；**`text_total`** = 同页 subhead + 全部 text 块 + 全部 list 条目之和，是物理容量的主约束。预算 = 各文字 region 扣内边距后按声明字号的物理排字容量 × 0.85（安全系数：PowerPoint 实际换行早于理想排字、中英混排宽度有波动）。部分页型（如 text-formula）声明了 `text_total_max_chars_full`：**页面没有公式块时**（文字落入更高的全高区）块与总量上限放宽到该值。`latex` 不计字数。个数约束：text 块数 / 列表条数 / 公式数 / 图片数对 `*_max`、`images_min`。
 
 ## 校验器
 
