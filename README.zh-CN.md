@@ -9,7 +9,7 @@
 
 ---
 
-把文档、图片和一句「用这份素材做一份组会汇报」交给 agent。skill 先规划大纲并经你确认，再渲染样张供你验收，最后产出完整成品。页面直接克隆自模板 pptx 原件，品牌层原样保留；公式转为 PowerPoint 可编辑数学对象；字体按用字子集化嵌入，文件在任何机器上都能正确显示。
+把文档、图片和一句「用这份素材做一份组会汇报」交给 agent。skill 先规划大纲并经你确认，再渲染样张供你验收，最后产出完整成品。页面直接克隆自内置模板，品牌层原样保留；公式转为 PowerPoint 可编辑数学对象；字体按用字子集化嵌入，文件在任何机器上都能正确显示。BLCU 主题随 skill 内置，`templates/` 的结构也为将来接入更多模板而设计。
 
 ## 安装
 
@@ -22,7 +22,7 @@ git clone https://github.com/ChHsiching/BLCU-PPT-Template.git
 claude --plugin-dir BLCU-PPT-Template
 ```
 
-渲染前请把模板原件放到 `templates/blcu-report/blcu-report.pptx`（有意不入库），其余内容随仓库分发。
+之后提供素材与提示词即可；agent 的下一步行为由 [SKILL.md](SKILL.md) 定义。
 
 ### 环境要求
 

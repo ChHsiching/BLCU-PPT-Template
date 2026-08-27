@@ -12,9 +12,10 @@
 Give your agent a document, some figures, and a prompt like “make this into a
 group-meeting report”. The skill plans an outline, confirms it with you,
 renders sample pages for approval, then produces the full deck on the BLCU
-report template. Slides are cloned from the template pptx itself, so its brand
+report template. Slides are cloned from the template itself, so its brand
 layer comes through exactly; formulas become editable PowerPoint math; fonts
-are subset and embedded so the file renders correctly anywhere.
+are subset and embedded so the file renders correctly anywhere. The BLCU
+theme ships built-in, and the `templates/` layout is ready for more.
 
 ## Installation
 
@@ -27,9 +28,7 @@ git clone https://github.com/ChHsiching/BLCU-PPT-Template.git
 claude --plugin-dir BLCU-PPT-Template
 ```
 
-Before rendering, place the template original at
-`templates/blcu-report/blcu-report.pptx`. It is kept out of git on purpose;
-everything else ships with the repo.
+Then provide material and a prompt; [SKILL.md](SKILL.md) drives the rest.
 
 ### Requirements
 
