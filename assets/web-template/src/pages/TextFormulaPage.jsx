@@ -50,6 +50,11 @@ export function TextFormulaPage({ page, arch }) {
           data-rhythm="1"
           style={{
             ...regionStyle(formulas.length > 0 ? arch.regions.text : arch.regions.text_full),
+            // no-formula pages vertically center their paragraphs — the
+            // pptx side mirrors this with anchor="ctr" on TextFullArea
+            ...(formulas.length === 0 && {
+              display: 'flex', flexDirection: 'column', justifyContent: 'center',
+            }),
             ...textboxPadding(),
             ...rhythmLineHeight(),
             ...regionRole(archetype, 'text'),

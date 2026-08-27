@@ -255,12 +255,19 @@ def _region_role(tokens: dict, archetype: str, region: str) -> dict:
 
 def _title_style(text: str, tokens: dict, archetype: str) -> dict:
     """Title role for this page; past title_long.over_chars (CJK width) the
-    long-title downgrade applies (44 -> 28 Bold, weight/color unchanged)."""
+    long-title downgrade applies (44 -> 28 Bold, weight/color unchanged).
+    over_chars parses with JS-style numeric-string coercion — layout.js and
+    both QA gates read it the same way, so a quoted number behaves identically
+    everywhere; an unparseable value means no downgrade."""
     name = _region_role_name(tokens, archetype, "title")
     long_role = tokens["roles"].get("title_long")
-    if name == "title" and long_role and \
-            vd.text_width(text) > long_role.get("over_chars", float("inf")):
-        name = "title_long"
+    if name == "title" and long_role:
+        try:
+            over = float(long_role.get("over_chars", float("inf")))
+        except (TypeError, ValueError):
+            over = float("inf")
+        if vd.text_width(text) > over:
+            name = "title_long"
     return _role_style(tokens, name)
 
 
@@ -675,13 +682,16 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
 
     if texts:
         # role_bindings map both text and text_full to the body role; the
-        # region (and box name) depends on whether formulas share the page
+        # region (and box name) depends on whether formulas share the page.
+        # The full-height region centers its paragraphs: a sparse pure-text
+        # page (结论页) top-anchored reads as a wall of empty space below.
         region = arch["regions"]["text"] if formulas else arch["regions"]["text_full"]
         paras = [_styled_paragraph(t, body_style, tokens, rhythm=True,
                                    emphasis=True)
                  for t in texts]
         box = _textbox_shape("TextArea" if formulas else "TextFullArea",
-                             region, _next_shape_id(el), tokens)
+                             region, _next_shape_id(el), tokens,
+                             anchor="t" if formulas else "ctr")
         _fill_textbox(box, paras)
         _sp_tree(el).append(box)
 
@@ -960,7 +970,7 @@ def main(argv=None) -> int:
     except OSError as exc:
         print(f"error: cannot write output {args.out}: {exc}", file=sys.stderr)
         return 2
-    except (KeyError, ValueError, zipfile.BadZipFile) as exc:
+    except (KeyError, TypeError, ValueError, zipfile.BadZipFile) as exc:
         # structurally broken manifest or a corrupt template original
         print(f"error: invalid manifest/template structure: {exc!r}", file=sys.stderr)
         return 2

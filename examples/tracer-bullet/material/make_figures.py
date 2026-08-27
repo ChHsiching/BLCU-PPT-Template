@@ -3,9 +3,10 @@
 Usage:
     python examples/tracer-bullet/material/make_figures.py
 
-Writes pipeline.png / loss-curves.png / acc-bars.png next to this file under
-images/. The data arrays here are the single source of the experiment numbers
-used by the material doc, the deck and the 演讲稿 — regenerate nothing by hand.
+Writes pipeline.png / loss-curves.png / acc-bars.png / lambda-ablation.png
+next to this file under images/. The data arrays here are the single source
+of the experiment numbers used by the material doc, the deck and the 演讲稿 —
+regenerate nothing by hand.
 """
 from pathlib import Path
 
@@ -27,6 +28,11 @@ COLORS = ("#7f7f7f", "#1f77b4", "#d62728")
 FINAL_ACC = (94.6, 93.9, 95.2)
 FINAL_ACC_STD = (0.2, 0.2, 0.1)
 FINAL_LOSS = (0.043, 0.061, 0.036)
+
+# AdamW weight-decay ablation (3-seed means; the λ=1e-2 point matches
+# FINAL_ACC[2] so the ablation and the main comparison cannot drift apart)
+LAMBDA_LABELS = ("λ=0", "λ=1e-4", "λ=1e-2", "λ=5e-2")
+LAMBDA_ACC = (94.7, 94.9, 95.2, 94.4)
 
 # training-loss trajectories (coarse hand-fit to the logged runs; the fitted
 # endpoints match FINAL_LOSS so text and figures cannot drift apart)
@@ -76,10 +82,14 @@ def acc_bars(path):
 
 
 def pipeline(path):
-    """Training-pipeline schematic: forward, loss, decoupled-decay update."""
-    fig, ax = plt.subplots(figsize=(11.5, 3.6))
+    """Training-pipeline schematic: forward, loss, decoupled-decay update.
+
+    The bottom margin stays blank on purpose: the deck hugs the fitted
+    image's bottom edge with a caption scrim, and that band must cover only
+    whitespace, never the red annotation."""
+    fig, ax = plt.subplots(figsize=(11.5, 4.05))
     ax.set_xlim(0, 11.5)
-    ax.set_ylim(0, 3.6)
+    ax.set_ylim(-0.85, 3.2)
     ax.axis("off")
 
     boxes = [
@@ -122,12 +132,32 @@ def pipeline(path):
     plt.close(fig)
 
 
+def lambda_ablation(path):
+    """AdamW weight-decay sweep; the best λ is accented in brand green."""
+    best = LAMBDA_ACC.index(max(LAMBDA_ACC))
+    colors = ["#b8c9a9"] * len(LAMBDA_ACC)
+    colors[best] = "#548235"
+    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    bars = ax.bar(LAMBDA_LABELS, LAMBDA_ACC, color=colors, width=0.55)
+    for bar, acc in zip(bars, LAMBDA_ACC):
+        ax.text(bar.get_x() + bar.get_width() / 2, acc + 0.06,
+                f"{acc:.1f}%", ha="center", fontsize=11)
+    ax.set_ylabel("最终测试精度（%）")
+    ax.set_title("AdamW 权重衰减系数 λ 扫描（3 随机种子均值）")
+    ax.set_ylim(93.8, 95.8)
+    ax.grid(axis="y", alpha=0.3)
+    fig.tight_layout()
+    fig.savefig(path, dpi=200)
+    plt.close(fig)
+
+
 def main():
     OUT.mkdir(parents=True, exist_ok=True)
     pipeline(OUT / "pipeline.png")
     loss_curves(OUT / "loss-curves.png")
     acc_bars(OUT / "acc-bars.png")
-    print(f"wrote 3 figure(s) -> {OUT}")
+    lambda_ablation(OUT / "lambda-ablation.png")
+    print(f"wrote 4 figure(s) -> {OUT}")
 
 
 if __name__ == "__main__":

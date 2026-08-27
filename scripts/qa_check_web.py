@@ -56,6 +56,7 @@ import subprocess
 import sys
 import time
 import urllib.request
+import zipfile
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
@@ -356,20 +357,51 @@ def _css_rgb(value: str) -> tuple | None:
     return tuple(got[:3]) if len(got) >= 3 else None
 
 
-def _hex_rgb(color: str) -> tuple:
+def _hex_rgb(color) -> tuple | None:
+    """'#548235' -> (84, 130, 53); None for anything not a bare 6-hex —
+    callers treat None as no expectation rather than a mismatch."""
+    if not isinstance(color, str) or not re.fullmatch(r"#?[0-9A-Fa-f]{6}", color):
+        return None
     c = color.lstrip("#")
     return tuple(int(c[k:k + 2], 16) for k in (0, 2, 4))
 
 
+def _subdict(parent, key: str) -> dict:
+    """The child dict at parent[key]; {} unless it is a real dict. The web
+    manifest is a scaffold copy, hand-editable like any variant manifest, and
+    the gate degrades instead of crashing (the pptx gate's own contract)."""
+    child = parent.get(key) if isinstance(parent, dict) else None
+    return child if isinstance(child, dict) else {}
+
+
+def _sublist(parent, key: str) -> list:
+    """The child list at parent[key]; [] unless it is a real list."""
+    child = parent.get(key) if isinstance(parent, dict) else None
+    return child if isinstance(child, list) else []
+
+
+def _num(parent, key: str):
+    """The numeric value at parent[key]; None for anything else."""
+    v = parent.get(key) if isinstance(parent, dict) else None
+    return v if isinstance(v, (int, float)) else None
+
+
 def _expected_title_role(tokens: dict, deck_page: dict, text: str | None) -> str | None:
     """Independently resolve the title element's role: role_bindings, then the
-    long-title downgrade over title_long.over_chars (CJK width)."""
+    long-title downgrade over title_long.over_chars (CJK width). Malformed
+    binding values and thresholds degrade to None, like the pptx gate."""
     archetype = deck_page.get("archetype", "")
-    bindings = tokens.get("role_bindings", {}).get(archetype, {})
+    bindings = _subdict(_subdict(tokens, "role_bindings"), archetype)
     name = bindings.get("label") if archetype == "agenda" else bindings.get("title")
-    long = tokens.get("roles", {}).get("title_long", {})
-    if name == "title" and text is not None and \
-            vd.text_width(text) > long.get("over_chars", float("inf")):
+    name = name if isinstance(name, str) else None
+    long = _subdict(_subdict(tokens, "roles"), "title_long")
+    # over_chars coerces like layout.js and the renderer do (numeric strings
+    # parse; anything unparseable means no downgrade)
+    try:
+        over = float(long.get("over_chars", float("inf")))
+    except (TypeError, ValueError):
+        over = float("inf")
+    if name == "title" and text is not None and vd.text_width(text) > over:
         name = "title_long"
     return name
 
@@ -392,7 +424,7 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
     findings: list[vd.Finding] = []
     if manifest is None:
         return findings
-    tokens = manifest.get("typography", {}).get("tokens")
+    tokens = _subdict(_subdict(manifest, "typography"), "tokens")
     if not tokens:
         findings.append(vd.Finding(
             f"page {i}", "web.style_missing",
@@ -400,10 +432,11 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
             "checked or rendered",
         ))
         return findings
-    roles = tokens.get("roles", {})
-    weights = tokens.get("weights", {})
-    spacing = tokens.get("spacing", {})
+    roles = _subdict(tokens, "roles")
+    weights = _subdict(tokens, "weights")
+    spacing = _subdict(tokens, "spacing")
     weights_by_name = {v: k for k, v in weights.items()}
+    archetype = deck_page.get("archetype") if isinstance(deck_page, dict) else None
 
     state = page.evaluate(
         """() => {
@@ -424,6 +457,10 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
               role: el.dataset.role, rhythm: el.dataset.rhythm === '1',
               family: cs.fontFamily, size: px(cs.fontSize),
               weight: cs.fontWeight, color: cs.color, lineHeight: cs.lineHeight,
+              // vertically centered boxes (text_full design) shift the first
+              // line off the top-anchor model — checked as a design fact
+              // instead of an absolute offset
+              centered: cs.display === 'flex' && cs.justifyContent === 'center',
               paraTop: el.dataset.rhythm === '1' && el.firstElementChild
                 ? getComputedStyle(el.firstElementChild).marginTop : null,
               captionBg: el.dataset.role === 'caption' ? cs.backgroundColor : null,
@@ -437,6 +474,8 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
             color: getComputedStyle(el).color,
             weight: getComputedStyle(el).fontWeight,
             text: el.textContent,
+            // enclosing role: a missing emphasis.color inherits its color
+            role: el.closest('[data-role]')?.dataset.role ?? null,
           }))
           // the white-background hairline detector duplicated from
           // src/lib/hairline.js: the gate must verify the renderer applied
@@ -486,78 +525,113 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
 
     for el in state["roleEls"]:
         role = roles.get(el["role"])
-        if role is None:
+        if not isinstance(role, dict):
             findings.append(vd.Finding(
                 f"page {i}", "web.style",
                 f"element carries data-role={el['role']!r}, not a tokens role",
             ))
             continue
+        size_pt = _num(role, "size_pt")
+        before_pt = _num(spacing, "space_before_pt")
         where = f"[{el['role']}]"
         family_first = el["family"].split(",")[0].strip().strip('"')
         if family_first != tokens.get("face"):
             style_finding(f"{where} font-family", el["family"], tokens.get("face"))
-        if abs(el["size"] - PT_TO_PX * role["size_pt"]) > STYLE_TOL_PX:
-            style_finding(f"{where} font-size", f"{el['size']}px", f"{role['size_pt']}pt")
-        if weights_by_name.get(int(el["weight"])) != role["weight"]:
-            style_finding(f"{where} font-weight", el["weight"], role["weight"])
-        if _css_rgb(el["color"]) != _hex_rgb(role["color"]):
-            style_finding(f"{where} color", el["color"], role["color"])
-        pitch = spacing.get("line_pitch_em" if el["rhythm"] else "single_pitch_em")
+        if size_pt is not None and abs(el["size"] - PT_TO_PX * size_pt) > STYLE_TOL_PX:
+            style_finding(f"{where} font-size", f"{el['size']}px", f"{size_pt}pt")
+        if weights_by_name.get(int(el["weight"])) != role.get("weight"):
+            style_finding(f"{where} font-weight", el["weight"], role.get("weight"))
+        role_rgb = _hex_rgb(role.get("color"))
+        if role_rgb is not None and _css_rgb(el["color"]) != role_rgb:
+            style_finding(f"{where} color", el["color"], role.get("color"))
+        pitch = _num(spacing, "line_pitch_em" if el["rhythm"] else "single_pitch_em")
         line_height = _css_px(el["lineHeight"])
-        if pitch and (line_height is None or
-                      abs(line_height - el["size"] * pitch) > 1.0):
+        if pitch is not None and (line_height is None or
+                                  abs(line_height - el["size"] * pitch) > 1.0):
             style_finding(f"{where} line-height", el["lineHeight"],
                           f"{el['size'] * pitch:.1f}px ({pitch}em)")
-        if el["rhythm"]:
+        if el["rhythm"] and before_pt is not None:
             before = _css_px(el["paraTop"])
-            if before is None or abs(before - PT_TO_PX * spacing["space_before_pt"]) > 0.5:
+            if before is None or abs(before - PT_TO_PX * before_pt) > 0.5:
                 style_finding(f"{where} paragraph space-before", el["paraTop"],
-                              f"{spacing['space_before_pt']}pt")
+                              f"{before_pt}pt")
         # vertical placement: the first text line sits at the v-inset
         # (top-anchored boxes), plus the 12pt paragraph space in body flow.
+        # Centered boxes (text_full design) are exempt here — their
+        # centering is asserted as a design fact below.
         # getBoundingClientRect scales with the stage transform, so this is
         # only valid unscaled because VIEWPORT equals the 1280x720 stage
         # (scale === 1); a different VIEWPORT needs a stage-size division
         # here like the brand checks' stageH normalization.
-        if el["textTop"] is not None:
-            inset_px = 1280 / manifest["slide_size"]["w"] * spacing["textbox_inset_v_in"]
-            want = inset_px + (PT_TO_PX * spacing["space_before_pt"] if el["rhythm"] else 0)
-            if abs(el["textTop"] - want) > 1.5:
-                style_finding(f"{where} first-line offset", f"{el['textTop']:.1f}px",
-                              f"{want:.1f}px")
+        if el["textTop"] is not None and not el.get("centered"):
+            inset_in = _num(spacing, "textbox_inset_v_in")
+            slide_w = _num(_subdict(manifest, "slide_size"), "w")
+            if inset_in is not None and slide_w:
+                inset_px = 1280 / slide_w * inset_in
+                want = inset_px + (PT_TO_PX * before_pt if el["rhythm"] and
+                                   before_pt is not None else 0)
+                if abs(el["textTop"] - want) > 1.5:
+                    style_finding(f"{where} first-line offset", f"{el['textTop']:.1f}px",
+                                  f"{want:.1f}px")
         if el["role"] == "caption":
-            scrim = role.get("scrim", {})
-            nums = [float(c) for c in re.findall(r"[\d.]+", el["captionBg"] or "")]
-            want_rgb = _hex_rgb(scrim.get("color", "#000000"))
-            want_alpha = scrim.get("alpha_pct", 0) / 100
-            if len(nums) < 4 or tuple(int(n) for n in nums[:3]) != want_rgb or \
-                    abs(nums[3] - want_alpha) > 0.01:
-                style_finding("caption scrim", el["captionBg"],
-                              f"rgba{want_rgb + (want_alpha,)}")
+            scrim = _subdict(role, "scrim")
+            alpha = _num(scrim, "alpha_pct")
+            want_rgb = _hex_rgb(scrim.get("color"))
+            if want_rgb is not None and alpha is not None:
+                nums = [float(c) for c in re.findall(r"[\d.]+", el["captionBg"] or "")]
+                want_alpha = alpha / 100
+                if len(nums) < 4 or tuple(int(n) for n in nums[:3]) != want_rgb or \
+                        abs(nums[3] - want_alpha) > 0.01:
+                    style_finding("caption scrim", el["captionBg"],
+                                  f"rgba{want_rgb + (want_alpha,)}")
 
-    # emphasis: paired markers over body-flow blocks -> green bold runs
-    emph_cfg = tokens.get("emphasis", {})
-    marker = re.escape(emph_cfg.get("marker", "**"))
+    # pure-text text-formula pages center their body block in the full-height
+    # region (mirrors render_pptx anchor="ctr" on TextFullArea): a top-anchored
+    # sparse page reads as a wall of empty space below
+    if archetype == "text-formula" and not _page_blocks(deck_page, "formula"):
+        body_role = _subdict(_subdict(tokens, "role_bindings"), "text-formula").get("text")
+        body_els = [e for e in state["roleEls"] if e["role"] == body_role]
+        if body_els and not body_els[0].get("centered"):
+            findings.append(vd.Finding(
+                f"page {i}", "web.style",
+                "pure-text page body block is top-anchored; the text_full "
+                "design centers it vertically (no bottom void)",))
+
+    # emphasis: paired markers over body-flow blocks -> emphasized runs.
+    # Defaults mirror src/lib/layout.js exactly: an absent marker token means
+    # no emphasis runs at all, an absent weight means bold, and an absent
+    # color inherits the enclosing role's color.
+    emph_cfg = tokens.get("emphasis")
+    emph_cfg = emph_cfg if isinstance(emph_cfg, dict) else {}
+    marker_src = emph_cfg.get("marker")
+    marker = re.escape(marker_src) if isinstance(marker_src, str) and marker_src else ""
     expected_runs = sum(
         len(re.findall(rf"{marker}(.+?){marker}", t, re.S))
-        for t in _body_flow_texts(deck_page))
+        for t in _body_flow_texts(deck_page)) if marker else 0
     if len(state["emph"]) != expected_runs:
         findings.append(vd.Finding(
             f"page {i}", "web.style",
             f"{expected_runs} emphasized keyword(s) expected in body flow, "
             f"{len(state['emph'])} .emph element(s) rendered",
         ))
+    want_weight = emph_cfg.get("weight", "bold")
     for run in state["emph"]:
-        if _css_rgb(run["color"]) != _hex_rgb(emph_cfg.get("color", "#548235")) or \
-                weights_by_name.get(int(run["weight"])) != emph_cfg.get("weight"):
+        parent_role = roles.get(run.get("role"))
+        want_color = emph_cfg.get("color") or (
+            parent_role.get("color") if isinstance(parent_role, dict) else None)
+        want_rgb = _hex_rgb(want_color)
+        color_bad = want_rgb is not None and _css_rgb(run["color"]) != want_rgb
+        if color_bad or weights_by_name.get(int(run["weight"])) != want_weight:
             style_finding(f"emphasis run {run['text']!r}",
                           f"{run['color']} {run['weight']}",
-                          f"{emph_cfg.get('color')} {emph_cfg.get('weight')}")
+                          f"{want_color} {want_weight}")
 
     # hairline: white-backgrounded images carry the token outline
-    hair = tokens.get("image", {}).get("hairline")
-    if hair:
-        want_w, want_c = PT_TO_PX * hair["width_pt"], _hex_rgb(hair["color"])
+    hair = _subdict(_subdict(tokens, "image"), "hairline")
+    width_pt = _num(hair, "width_pt")
+    want_rgb = _hex_rgb(hair.get("color"))
+    if hair and width_pt is not None and want_rgb is not None:
+        want_w, want_c = PT_TO_PX * width_pt, want_rgb
         for img in state["hairlineImgs"]:
             if not img["loaded"] or not img["white"]:
                 continue
@@ -601,20 +675,47 @@ def _check_fonts(page) -> list:
 GEO_TOL_IN = 0.05  # DOM-rect tolerance in slide inches (rounding + subpixel)
 
 
+def _brand_region(entry) -> dict | None:
+    """The x/y/w/h region of a brand_layer entry, None when malformed."""
+    if not isinstance(entry, dict):
+        return None
+    try:
+        return {k: float(entry[k]) for k in ("x", "y", "w", "h")}
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _band_hex(manifest) -> str:
+    """tokens.colors.band as a bare 6-hex string; '' for anything malformed."""
+    v = _subdict(_subdict(_subdict(manifest, "typography"), "tokens"), "colors") \
+        .get("band")
+    if isinstance(v, str) and re.fullmatch(r"#?[0-9A-Fa-f]{6}", v):
+        return v.lstrip("#")
+    return ""
+
+
 def _brand_expect(manifest: dict, archetype: str):
     """(expected logo count, [(region, name)] incl. the band first) or None
-    when the manifest carries no brand_layer (a finding by itself)."""
+    when the manifest carries no usable brand_layer group (a finding by
+    itself)."""
     bl = manifest.get("brand_layer") if isinstance(manifest, dict) else None
     if not isinstance(bl, dict):
         return None
     if archetype in ("cover", "closing"):
-        cover = bl["cover"]
-        elements = [(cover["mid_band"], "mid_band")]
-        elements += [(el, f"logos[{j}]") for j, el in enumerate(cover["logos"])]
-        elements.append((cover["corner_logo_bar"], "corner_logo_bar"))
-        return len(cover["logos"]) + 1, elements
-    content = bl["content"]
-    return 1, [(content["top_band"], "top_band"), (content["corner_logo"], "corner_logo")]
+        cover = _subdict(bl, "cover")
+        logos = [r for r in (_brand_region(e) for e in _sublist(cover, "logos")) if r]
+        band, bar = _brand_region(cover.get("mid_band")), _brand_region(cover.get("corner_logo_bar"))
+        if band is None or bar is None:
+            return None
+        elements = [(band, "mid_band")]
+        elements += [(r, f"logos[{j}]") for j, r in enumerate(logos)]
+        elements.append((bar, "corner_logo_bar"))
+        return len(logos) + 1, elements
+    content = _subdict(bl, "content")
+    band, logo = _brand_region(content.get("top_band")), _brand_region(content.get("corner_logo"))
+    if band is None or logo is None:
+        return None
+    return 1, [(band, "top_band"), (logo, "corner_logo")]
 
 
 def _check_page_brand(page, deck_page: dict, manifest: dict | None, i: int,
@@ -626,8 +727,8 @@ def _check_page_brand(page, deck_page: dict, manifest: dict | None, i: int,
     if expect is None:
         findings.append(vd.Finding(
             f"page {i}", "web.brand_missing",
-            "manifest has no brand_layer section; the web brand layer "
-            "(bands/logos/page numbers) cannot be checked or rendered",
+            "manifest has no usable brand_layer group for this page; the web "
+            "brand layer (bands/logos/page numbers) cannot be checked or rendered",
         ))
         return findings
     n_logos, elements = expect
@@ -692,8 +793,7 @@ def _check_page_brand(page, deck_page: dict, manifest: dict | None, i: int,
                 f"brand logo {name} did not load: {logo['src']}",
             ))
 
-    band_hex = manifest.get("typography", {}).get("tokens", {}).get(
-        "colors", {}).get("band", "").lstrip("#")
+    band_hex = _band_hex(manifest)
     if band_hex:
         want = tuple(int(band_hex[k:k + 2], 16) for k in (0, 2, 4))
         got = [int(c) for c in re.findall(r"\d+", state["band"]["color"])]
@@ -729,8 +829,7 @@ def _check_brand_pixels(page, deck_page: dict, manifest: dict | None,
     if expect is None:
         return []
     band = expect[1][0][0]
-    band_hex = manifest.get("typography", {}).get("tokens", {}).get(
-        "colors", {}).get("band", "").lstrip("#")
+    band_hex = _band_hex(manifest)
     if not band_hex:
         return []
     want = tuple(int(band_hex[k:k + 2], 16) for k in (0, 2, 4))
@@ -912,7 +1011,11 @@ def main(argv=None) -> int:
         try:
             findings.extend(check_export_chain(
                 web_dir, deck, manifest, args.templates_dir, args.export_pptx))
-        except (RuntimeError, rp.RenderError) as exc:
+        # the renderer is strict on manifest structure and needs a readable
+        # template original (its own CLI nets the same classes): a hand-edited
+        # manifest or corrupt template must exit cleanly here, never traceback
+        except (RuntimeError, rp.RenderError, KeyError, TypeError, ValueError,
+                zipfile.BadZipFile) as exc:
             print(f"error: export chain failed: {exc}", file=sys.stderr)
             return 2
         except OSError as exc:

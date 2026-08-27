@@ -9,7 +9,7 @@ skill 流程的首个可执行先例：后续生成的演示向它看齐。
 
 - `material/报告素材.md` — 素材文档（汇报的原始输入）
 - `material/make_figures.py` — 实验图生成脚本；数字的单一真相源
-- `material/images/` — 素材图片（pipeline 示意 / 损失曲线 / 精度柱状图）
+- `material/images/` — 素材图片（pipeline 示意 / 损失曲线 / 精度柱状图 / λ 消融柱状图）
 - `outline.md` — 大纲（CP1 固化：页面规划 + 预算核对 + 配图分配）
 - `deck.json` — 中间表示（validate_deck 全绿的单一真相源）
 - `演讲稿.md` — 独立讲稿交付物
@@ -43,5 +43,6 @@ python scripts/qa_check_web.py examples/tracer-bullet/out/web \
 ## 数字一致性约束
 
 素材表格、make_figures.py 的数据数组、deck 文字、演讲稿报数
-（95.2 / 93.9 / 94.6、+1.3 个百分点、std 0.1 vs 0.2）四处必须一致；
+（95.2 / 93.9 / 94.6、+1.3 个百分点、std 0.1 vs 0.2；λ 消融
+94.7 / 94.9 / 95.2 / 94.4）四处必须一致；
 改实验数字时从 make_figures.py 开始改，再同步其余三处。
