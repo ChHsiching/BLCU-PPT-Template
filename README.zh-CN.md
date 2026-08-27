@@ -35,14 +35,21 @@ claude --plugin-dir BLCU-PPT-Template
 
 ## 使用
 
-提供素材与提示词，其余由 [SKILL.md](SKILL.md) 驱动：
+把素材放进任意项目文件夹，图片文件名说明图片内容：
 
 ```text
-素材：文档 + 图片（图片文件名描述其内容）
-提示词：用这份素材做一份组会汇报，pptx 和 web 都要
+my-report/
+  material/
+    复现笔记.md
+    images/
+      lambda-acc.png      # 文件名 = 图的内容
 ```
 
-流程中你要参与两步：确认大纲（CP1）、验收样张（CP2）；全稿经脚本化质量门与 fresh subagent 审查，零缺陷后交付（CP3）。
+然后对 agent 说一句话：
+
+> 素材在 my-report/material/，做一份组会汇报，讲 15 分钟左右。
+
+页数、输出模式（pptx / web / 两者）、汇报人这些 CP1 会逐项问你；样张（CP2）验收通过后才渲染全稿。
 
 ## 产出物
 

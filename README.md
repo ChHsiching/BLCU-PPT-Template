@@ -41,16 +41,25 @@ Then provide material and a prompt; [SKILL.md](SKILL.md) drives the rest.
 
 ## Usage
 
-Hand the agent material plus a prompt; [SKILL.md](SKILL.md) drives the rest:
+Put your material in any project folder; figure filenames say what the
+figures show:
 
 ```text
-Material: docs + images (images named after their content)
-Prompt:   用这份素材做一份组会汇报，pptx 和 web 都要
+my-report/
+  material/
+    method-notes.md
+    images/
+      lambda-acc.png      # filename = what the figure shows
 ```
 
-You confirm the outline (CP1), approve sample pages (CP2), receive the full
-deck gated by scripted checks plus fresh-subagent review, then take delivery
-(CP3). Every deliverable must pass its gates with zero findings.
+Then tell the agent one line:
+
+> The material is in my-report/material/. Make it into a group-meeting
+> deck, about 15 minutes.
+
+Page count, output mode (pptx / web / both), and presenter name are asked
+one by one at CP1; the full deck renders only after you approve sample
+pages (CP2).
 
 ## Deliverables
 
