@@ -47,6 +47,8 @@ description: Generate BLCU-template presentations from user material — use whe
 
 每步以**完成判据**收口。渲染产物（pptx / web 工程）统一落演示项目的 `out/`，首次用 render_pptx 前创建该目录（render_pptx 不代建）。已有产物的修改请求按影响面进入对应步骤：改文案/换图 → 从步骤 6 的 deck.json 起步重过 G2+G3；改结构/页数 → 从步骤 3 起步。
 
+**门禁日志**：每道门与检查点过门后，向演示项目根的 `gates.md` 追加一行：`门名 | 证据一行（命令与退出码 / 审查结论与轮次 / 用户答复概要）| 日期`；回跳重跑每轮单独记录。审查者按 `references/reviewer-contract.md` 核验覆盖度。
+
 ### 0. Phase 0 · 依赖探测
 
 逐项探测契约头的依赖与降级清单；探测结论带进 CP1 呈报。
@@ -104,7 +106,7 @@ brief 式逐项决策，决策项清单与改动处理规则见 `references/outl
 - web（如有）：放映 `cd out/web && npm run dev`；导出 `python scripts/render_pptx.py <项目>/deck.json -o <out.pptx>`
 - 演讲稿：`演讲稿.md`
 
-完成判据：用户收到完整清单；每项产物存在、命令原样可执行。
+完成判据：完整清单交付，含 gates.md（覆盖全部应过的门与回跳重跑轮次）；每项产物存在、命令原样可执行。
 
 ## 演讲稿规范
 

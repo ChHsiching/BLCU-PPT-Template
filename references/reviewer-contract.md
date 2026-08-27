@@ -1,6 +1,6 @@
 # 审查者契约（G1 / G3 派遣）
 
-G1 与 G3 的审查者必须是 fresh subagent（执行纪律：生产者不审自己的产出）。派遣时把下方提示词模板填入当次输入清单整体发出；审查者只读、defect-first、按五类具名缺陷报告，No findings 是合法结论。
+G1 与 G3 的审查者必须是 fresh subagent（执行纪律：生产者不审自己的产出）。派遣时把下方提示词模板填入当次输入清单整体发出；审查者只读、defect-first、按六类具名缺陷报告，No findings 是合法结论。
 
 ## 派遣提示词模板
 
@@ -13,13 +13,15 @@ G1 与 G3 的审查者必须是 fresh subagent（执行纪律：生产者不审�
 - <产物截图：COM 截图目录（pptx 产物）/ web 截图目录，按当次范围>
 - 真相源：templates/blcu-report/manifest.json（预算）、references/archetypes.md（页型语义）
 - AI 味 pattern：`references/ai-slop-patterns.md`
+- <gates.md 路径>（门禁日志——核验第 6 类）
 
-只报告以下五类具名缺陷：
+只报告以下六类具名缺陷：
 1. 占位残留 —— xxx / TODO / lorem / [insert / 待补充 等未定内容。
 2. 超预算 —— 超出 manifest budget 的页或块，引出双方数值。
 3. AI 味引证 —— 命中 pattern 清单的原文，引 pattern 名 + 原文行。
 4. 与素材事实不符 —— 页面或讲稿的数字/结论在素材中无出处或相抵触，引两侧原文。
 5. 页型错配 —— 内容形态与页型语义冲突（如 chart-focus 放两张图、text-formula 塞代码）。
+6. 流程缺门 —— gates.md 缺失，或未覆盖本门之前应过的门（G1 查 Phase 0 / O1 / AI 味门 / CP1；G3 另查 CP2 / G2；回跳重跑逐轮在录）。
 
 输出：findings 列表，每条一行：
   [P0-P3] 类别 | 位置（页/块/行）| 证据原文 | 一句修法
@@ -28,7 +30,7 @@ G1 与 G3 的审查者必须是 fresh subagent（执行纪律：生产者不审�
 
 ## 严重度（P0–P3）
 
-- **P0** 产物不可用：文件打不开、页数与大纲不符、占位残留。
+- **P0** 产物不可用：文件打不开、页数与大纲不符、占位残留、流程缺门（门链不可信）。
 - **P1** 内容失真：与素材事实不符、超容量预算。
 - **P2** 形态与文风：页型错配、AI 味引证。
 - **P3** 瑕疵：不改不损害事实与结构（如措辞可再紧）。
@@ -37,8 +39,8 @@ G1 与 G3 的审查者必须是 fresh subagent（执行纪律：生产者不审�
 
 ## 各门输入范围
 
-- **G1（样张）**：样张 deck.json + 样张产物截图 + outline.md + 素材。
-- **G3（全稿）**：全稿 deck.json + outline.md + 素材 + 素材要点.md + 全部产物截图（COM / web）+ 演讲稿。
+- **G1（样张）**：样张 deck.json + 样张产物截图 + outline.md + 素材 + gates.md。
+- **G3（全稿）**：全稿 deck.json + outline.md + 素材 + 素材要点.md + 全部产物截图（COM / web）+ 演讲稿 + gates.md。
 
 ## fail loop
 
