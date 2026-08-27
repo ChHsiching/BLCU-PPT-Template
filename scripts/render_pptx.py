@@ -637,63 +637,52 @@ def fill_text_formula(slide, page: dict, arch: dict, manifest: dict,
                       xsl_path: Path | None, stats) -> None:
     el = slide.part._element
     tokens = _tokens(manifest)
-    formulas = [b["latex"] for b in page["blocks"] if b["type"] == "formula"]
-    texts = _page_texts(page)
+    blocks = [b for b in page["blocks"] if b["type"] in ("formula", "text")]
     formula_size = tokens["roles"]["formula"]["size_pt"]
     body_style = _region_role(tokens, "text-formula", "text")
 
     _strip_content_shapes(el)
     _fill_title(el, page, arch, tokens, "text-formula")
 
-    # formula area: native OMML paragraphs, image fallbacks stacked below
-    native, fallbacks = [], []
-    for latex in formulas:
-        omml = convert_latex_to_omml(latex, xsl_path)
-        if omml is None:
-            fallbacks.append(latex)
+    # one full-height content-flow box (the template author's own idiom):
+    # centered formula lines and left-aligned prose interleaved in block
+    # order. The flow vertically centers in the region — a filled page reads
+    # the same as top-anchored, a partial page reads as composed breathing
+    # room instead of a bottom void. Formula fallback images cannot live in
+    # a text flow — they stack in the region's bottom band instead.
+    paragraphs, fallbacks, n_native = [], [], 0
+    for b in blocks:
+        if b["type"] == "formula":
+            omml = convert_latex_to_omml(b["latex"], xsl_path)
+            if omml is None:
+                fallbacks.append(b["latex"])
+            else:
+                _style_math_runs(omml, formula_size)
+                paragraphs.append(_math_paragraph(omml))
+                n_native += 1
         else:
-            _style_math_runs(omml, formula_size)
-            native.append(_math_paragraph(omml))
-    stats.formulas_native += len(native)
+            paragraphs.append(_styled_paragraph(b["text"], body_style, tokens,
+                                                rhythm=True, emphasis=True))
+    stats.formulas_native += n_native
     stats.formulas_fallback += len(fallbacks)
 
-    if native:
-        box = _textbox_shape("FormulaArea", arch["regions"]["formula"],
-                             _next_shape_id(el), tokens)
-        _fill_textbox(box, native)
+    if paragraphs:
+        box = _textbox_shape("ContentArea", arch["regions"]["content"],
+                             _next_shape_id(el), tokens, anchor="ctr")
+        _fill_textbox(box, paragraphs)
         _sp_tree(el).append(box)
-    # Fallback images live in the formula region's usable band: clamped above
-    # the text region (the manifest lets the formula and text regions overlap;
-    # native flow never enters that band, images must not either) and below
-    # the headroom reserved for native paragraphs flowing from the top.
     for i, latex in enumerate(fallbacks):
         png = io.BytesIO(render_latex_png_bytes(latex))
-        region = arch["regions"]["formula"]
-        band_top, band_bottom = Inches(region["y"]), Inches(region["y"]) + Inches(region["h"])
-        if texts:
-            band_bottom = min(band_bottom, Inches(arch["regions"]["text"]["y"]))
-        if native:
-            band_top += min(Inches(0.55) * len(native), (band_bottom - band_top) // 2)
-        slot = (band_bottom - band_top) / len(fallbacks)
+        region = arch["regions"]["content"]
+        top_band = Inches(region["y"]) + Inches(region["h"])
+        if paragraphs:  # keep the image flow clear of native paragraphs
+            top_band = min(top_band, Inches(region["y"]) + Inches(0.55) * len(paragraphs))
+        slot = (Inches(region["y"]) + Inches(region["h"]) - top_band) / len(fallbacks)
         height = int(slot * 0.9)
-        top = int(band_bottom - slot * (i + 1) + (slot - height) / 2)
+        top = int(Inches(region["y"]) + Inches(region["h"]) - slot * (i + 1)
+                  + (slot - height) / 2)
         pic = slide.shapes.add_picture(png, Inches(region["x"]), top, height=height)
         pic.left = int(Inches(region["x"]) + (Inches(region["w"]) - pic.width) / 2)
-
-    if texts:
-        # role_bindings map both text and text_full to the body role; the
-        # region (and box name) depends on whether formulas share the page.
-        # The full-height region centers its paragraphs: a sparse pure-text
-        # page (结论页) top-anchored reads as a wall of empty space below.
-        region = arch["regions"]["text"] if formulas else arch["regions"]["text_full"]
-        paras = [_styled_paragraph(t, body_style, tokens, rhythm=True,
-                                   emphasis=True)
-                 for t in texts]
-        box = _textbox_shape("TextArea" if formulas else "TextFullArea",
-                             region, _next_shape_id(el), tokens,
-                             anchor="t" if formulas else "ctr")
-        _fill_textbox(box, paras)
-        _sp_tree(el).append(box)
 
 
 def fill_agenda(slide, page: dict, arch: dict, manifest: dict) -> None:

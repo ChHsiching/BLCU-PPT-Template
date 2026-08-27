@@ -461,6 +461,13 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
               // line off the top-anchor model — checked as a design fact
               // instead of an absolute offset
               centered: cs.display === 'flex' && cs.justifyContent === 'center',
+              // formula-first flow: the first line is a math block carrying
+              // the OMML rhythm's 16pt before, not the body's 12pt
+              firstFormula: (() => {
+                const fc = el.firstElementChild
+                return !!fc && (fc.classList.contains('formula')
+                                || !!fc.querySelector('.formula'))
+              })(),
               paraTop: el.dataset.rhythm === '1' && el.firstElementChild
                 ? getComputedStyle(el.firstElementChild).marginTop : null,
               captionBg: el.dataset.role === 'caption' ? cs.backgroundColor : null,
@@ -550,7 +557,9 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
                                   abs(line_height - el["size"] * pitch) > 1.0):
             style_finding(f"{where} line-height", el["lineHeight"],
                           f"{el['size'] * pitch:.1f}px ({pitch}em)")
-        if el["rhythm"] and before_pt is not None:
+        if el["rhythm"] and before_pt is not None and not el.get("firstFormula"):
+            # formula-first flows open with the OMML 16pt rhythm, checked via
+            # the offset expectation below
             before = _css_px(el["paraTop"])
             if before is None or abs(before - PT_TO_PX * before_pt) > 0.5:
                 style_finding(f"{where} paragraph space-before", el["paraTop"],
@@ -568,8 +577,9 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
             slide_w = _num(_subdict(manifest, "slide_size"), "w")
             if inset_in is not None and slide_w:
                 inset_px = 1280 / slide_w * inset_in
-                want = inset_px + (PT_TO_PX * before_pt if el["rhythm"] and
-                                   before_pt is not None else 0)
+                gap_pt = 16 if el.get("firstFormula") else before_pt
+                want = inset_px + (PT_TO_PX * gap_pt if el["rhythm"]
+                                   and gap_pt is not None else 0)
                 if abs(el["textTop"] - want) > 1.5:
                     style_finding(f"{where} first-line offset", f"{el['textTop']:.1f}px",
                                   f"{want:.1f}px")
@@ -585,17 +595,17 @@ def _check_page_styles(page, deck_page: dict, manifest: dict | None, i: int) -> 
                     style_finding("caption scrim", el["captionBg"],
                                   f"rgba{want_rgb + (want_alpha,)}")
 
-    # pure-text text-formula pages center their body block in the full-height
-    # region (mirrors render_pptx anchor="ctr" on TextFullArea): a top-anchored
-    # sparse page reads as a wall of empty space below
-    if archetype == "text-formula" and not _page_blocks(deck_page, "formula"):
+    # text-formula content flows vertically center in the full-height region
+    # (mirrors render_pptx anchor="ctr" on ContentArea): a top-anchored
+    # partial page reads as a wall of empty space below
+    if archetype == "text-formula":
         body_role = _subdict(_subdict(tokens, "role_bindings"), "text-formula").get("text")
         body_els = [e for e in state["roleEls"] if e["role"] == body_role]
         if body_els and not body_els[0].get("centered"):
             findings.append(vd.Finding(
                 f"page {i}", "web.style",
-                "pure-text page body block is top-anchored; the text_full "
-                "design centers it vertically (no bottom void)",))
+                "content flow is top-anchored; the content-flow design "
+                "centers it vertically (no bottom void)",))
 
     # emphasis: paired markers over body-flow blocks -> emphasized runs.
     # Defaults mirror src/lib/layout.js exactly: an absent marker token means

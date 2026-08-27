@@ -48,7 +48,7 @@ SAMPLE_EVERY = EPOCHS / (len(LOSS_CURVES["AdamW"]) - 1)  # epochs per sample poi
 
 
 def loss_curves(path):
-    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    fig, ax = plt.subplots(figsize=(11.4, 3.6))
     for name, values in LOSS_CURVES.items():
         epochs = [i * SAMPLE_EVERY for i in range(len(values))]
         line, = ax.plot(epochs, values, marker="o", markersize=3.5,
@@ -66,7 +66,7 @@ def loss_curves(path):
 
 
 def acc_bars(path):
-    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    fig, ax = plt.subplots(figsize=(11.4, 3.6))
     bars = ax.bar(OPTIMIZERS, FINAL_ACC, yerr=FINAL_ACC_STD, capsize=5,
                   color=COLORS, width=0.55)
     for bar, acc, err in zip(bars, FINAL_ACC, FINAL_ACC_STD):
@@ -137,7 +137,7 @@ def lambda_ablation(path):
     best = LAMBDA_ACC.index(max(LAMBDA_ACC))
     colors = ["#b8c9a9"] * len(LAMBDA_ACC)
     colors[best] = "#548235"
-    fig, ax = plt.subplots(figsize=(7.2, 4.4))
+    fig, ax = plt.subplots(figsize=(11.4, 3.6))
     bars = ax.bar(LAMBDA_LABELS, LAMBDA_ACC, color=colors, width=0.55)
     for bar, acc in zip(bars, LAMBDA_ACC):
         ax.text(bar.get_x() + bar.get_width() / 2, acc + 0.06,

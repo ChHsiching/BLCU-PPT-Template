@@ -164,7 +164,7 @@ def test_catches_canvas_and_safe_bottom_overflows(tmp_path):
     prs = Presentation(out)
     agenda_list = next(sp for sp in prs.slides[1].shapes if sp.name == "AgendaList")
     agenda_list.top = Inches(7.0)  # bottom lands at 12.2in, off-canvas
-    text_area = next(sp for sp in prs.slides[2].shapes if sp.name == "TextArea")
+    text_area = next(sp for sp in prs.slides[2].shapes if sp.name == "ContentArea")
     text_area.top, text_area.height = Inches(4.32), Inches(3.0)  # bottom 7.32 > 6.9
     broken = tmp_path / "overflow.pptx"
     prs.save(broken)
@@ -198,7 +198,7 @@ def test_catches_font_face_drift(tmp_path):
     # a run restyled to another face after rendering: page-to-page font
     # consistency is a gate, not a preference
     out, prs = _mutated_fixture(tmp_path)
-    _, runs = _shape_runs(prs, 2, "TextArea")
+    _, runs = _shape_runs(prs, 2, "ContentArea")
     rPr = runs[0].find(f"{{{qp.NS_A}}}rPr")
     for tag in ("latin", "ea"):
         rPr.find(f"{{{qp.NS_A}}}{tag}").set("typeface", "微软雅黑")
@@ -218,7 +218,7 @@ def test_catches_weight_hierarchy_break(tmp_path):
     out, prs = _mutated_fixture(tmp_path)
     title = next(sp for sp in prs.slides[2].shapes if qp.ph_type(sp) == "title")
     title._element.find(f".//{{{qp.NS_A}}}rPr").set("b", "0")
-    _, runs = _shape_runs(prs, 2, "TextArea")
+    _, runs = _shape_runs(prs, 2, "ContentArea")
     runs[0].find(f"{{{qp.NS_A}}}rPr").set("b", "1")  # stays black: not emphasis
     broken = tmp_path / "weights.pptx"
     prs.save(broken)
@@ -226,7 +226,7 @@ def test_catches_weight_hierarchy_break(tmp_path):
     assert proc.returncode == 1
     findings = [l for l in proc.stdout.splitlines() if "[pptx.role_style]" in l]
     assert any("role 'title'" in l for l in findings)
-    assert any("font-weight" in l and "TextArea" in l for l in findings)
+    assert any("font-weight" in l and "ContentArea" in l for l in findings)
 
 
 @requires_math
@@ -297,11 +297,11 @@ def test_title_face_variant_is_an_explicit_machine_checked_override(tmp_path):
 
 
 @requires_math
-def test_catches_top_anchored_text_full_page(tmp_path):
-    # the text_full design centers pure-text pages; a box flipped back to
-    # top anchor after rendering reintroduces the bottom void
+def test_catches_top_anchored_pure_text_page(tmp_path):
+    # the pure-text design centers pages without formulas; a box flipped
+    # back to top anchor after rendering reintroduces the bottom void
     out, prs = _mutated_fixture(tmp_path)
-    box = next(sp for sp in prs.slides[3].shapes if sp.name == "TextFullArea")
+    box = next(sp for sp in prs.slides[3].shapes if sp.name == "ContentArea")
     bodyPr = box._element.find(
         f"{{{qp.NS_P}}}txBody/{{{qp.NS_A}}}bodyPr")
     bodyPr.set("anchor", "t")
@@ -310,7 +310,7 @@ def test_catches_top_anchored_text_full_page(tmp_path):
     proc = qa_pptx(broken, FULL_DECK)
     assert proc.returncode == 1
     findings = [l for l in proc.stdout.splitlines() if "[pptx.role_style]" in l]
-    assert any("TextFullArea" in l and "centers" in l for l in findings)
+    assert any("ContentArea" in l and "centers" in l for l in findings)
 
 
 @requires_math

@@ -292,16 +292,17 @@ def _check_geometry(sp, spath: str, manifest: dict, is_picture: bool) -> list:
 
 # renderer textbox name -> (role_bindings region key, emphasis runs allowed).
 # Both columns mirror what render_pptx actually consumes: fill_text_formula
-# styles TextArea and TextFullArea from the `text` binding and fill_text_image
-# styles TextColumn from `text` as well (the manifest's text_full/text_column
-# keys are web-side synonyms bound to the same roles). The emphasis column
-# mirrors the renderer's emphasis=True fill sites: only body-flow shapes ever
-# carry **keyword** runs; ceremonial single-line roles keep markers literal.
+# interleaves formulas and prose in one ContentArea flow styled from the
+# `text` binding, and fill_text_image styles TextColumn from `text` as well
+# (the manifest's text_full/text_column keys are web-side synonyms bound to
+# the same roles). The emphasis column mirrors the renderer's emphasis=True
+# fill sites: only body-flow shapes ever carry **keyword** runs; ceremonial
+# single-line roles keep markers literal.
 _SHAPE_ROLES = {
     "AgendaLabel": ("label", False),
     "AgendaList": ("list", True),
-    "TextArea": ("text", True),
-    "TextFullArea": ("text", True),
+    "ContentArea": ("text", True),   # text-formula unified content flow
+    "TextArea": ("text", True),      # text-image multi-slot text region
     "TextColumn": ("text", True),
     "SubheadArea": ("subhead", False),
     "CommentArea": ("comment", True),
@@ -443,23 +444,26 @@ def _check_style(slide, page, spath: str, manifest: dict) -> list:
                 findings.extend(_check_role_run(
                     rPr, text, role, role_name, emph_ok, emph_color, emph_bold,
                     accent, color, where))
-        if sp.name == "FormulaArea":
+        if sp.name == "FormulaArea" or sp.name == "ContentArea":
+            # math runs live inside the unified content flow; the check is
+            # keyed on the runs themselves so it follows wherever they land
             formula_role = roles.get("formula")
             if not isinstance(formula_role, dict) or \
                     not isinstance(formula_role.get("size_pt"), (int, float)):
                 formula_role = None  # malformed formula role: unverifiable
             findings.extend(_check_math_runs(sp, formula_role, where))
-        if sp.name == "TextFullArea":
-            # pure-text pages center their paragraphs in the full-height
-            # region — a top-anchored sparse page reads as a bottom void
-            # (renderer-web mirrors this with flex centering)
+        if sp.name == "ContentArea":
+            # the content flow vertically centers in the full-height region:
+            # a partial page reads as composed breathing room, a top-anchored
+            # one as a bottom void (renderer-web mirrors with flex centering)
             bodyPr = sp._element.find(
                 f"{{{NS_P}}}txBody/{{{NS_A}}}bodyPr")
-            if bodyPr is None or bodyPr.get("anchor", "t") != "ctr":
+            anchor = bodyPr.get("anchor", "t") if bodyPr is not None else "t"
+            if anchor != "ctr":
                 findings.append(vd.Finding(
                     where, "pptx.role_style",
-                    "TextFullArea is top-anchored; the text_full design "
-                    "centers its paragraphs vertically (anchor='ctr')"))
+                    f"ContentArea anchor {anchor!r}; the content-flow design "
+                    f"centers it vertically (anchor='ctr')"))
     return findings
 
 

@@ -319,9 +319,9 @@
       "regions": {
         "label": {
           "x": 5.0,
-          "y": 0.5,
+          "y": 0.0,
           "w": 3.5,
-          "h": 1.0
+          "h": 1.11
         },
         "list": {
           "x": 0.75,
@@ -349,7 +349,7 @@
         "images_max": 0,
         "caption_max_chars": 0
       },
-      "budget_derivation": "S3（#18）重核（行距 1.5 实测 1.779em、扣一段 12pt 段前；实测每行 18pt→32.02、20pt→35.58、22pt→39.14，scripts/measure_line_pitch.py）：title_max_chars 5 = floor((3.5−0.2)÷(40/72))，label 区单行 @40pt Bold（48pt/4 → 40pt/5，单行不受节奏影响）；text_total_max_chars 278 = floor((11.25−0.2)÷(22/72) × ((5.2−0.1)×72−12)÷39.14 × 0.85)，list 区 @22pt（S2 427 → 278：行距模型 1.2em→实测 1.779em；按 1.779em=39.14pt/行计得 278.98，未舍入实测 39.135 亦得 278.996，皆 floor 278）；list_item_max_chars 30 为锚定值（22pt 单行容量 floor(36.16)=36 ≥ 30，安全）；list_items_max 6 锚定（一屏章节深度约束，非容量导出）"
+      "budget_derivation": "S3（#18）重核（行距 1.5 实测 1.779em、扣一段 12pt 段前；实测每行 18pt→32.02、20pt→35.58、22pt→39.14，scripts/measure_line_pitch.py）：title_max_chars 5 = floor((3.5−0.2)÷(40/72))，label 区单行 @40pt Bold（48pt/4 → 40pt/5，单行不受节奏影响）；text_total_max_chars 278 = floor((11.25−0.2)÷(22/72) × ((5.2−0.1)×72−12)÷39.14 × 0.85)，list 区 @22pt（S2 427 → 278：行距模型 1.2em→实测 1.779em；按 1.779em=39.14pt/行计得 278.98，未舍入实测 39.135 亦得 278.996，皆 floor 278）；list_item_max_chars 30 为锚定值（22pt 单行容量 floor(36.16)=36 ≥ 30，安全）；list_items_max 6 锚定（一屏章节深度约束，非容量导出） S6：标签区改为条内垂直居中（y0–1.11，40pt 字符高约 0.55in 完全落入条内），宽度未动，title_max_chars 5 不变。"
     },
     "text-formula": {
       "purpose": "文字 + 原生 OMML 公式页；公式为 0 时即纯文字页",
@@ -365,19 +365,7 @@
           "w": 11.86,
           "h": 1.11
         },
-        "formula": {
-          "x": 0.74,
-          "y": 1.4,
-          "w": 11.86,
-          "h": 3.0
-        },
-        "text": {
-          "x": 0.74,
-          "y": 4.55,
-          "w": 11.86,
-          "h": 2.0
-        },
-        "text_full": {
+        "content": {
           "x": 0.74,
           "y": 1.11,
           "w": 11.86,
@@ -393,18 +381,17 @@
       "budget": {
         "title_max_chars": 25,
         "text_blocks_max": 8,
-        "text_block_max_chars": 125,
-        "text_total_max_chars": 125,
+        "text_block_max_chars": 383,
+        "text_total_max_chars": 383,
         "subhead_max_chars": 0,
         "list_items_max": 0,
         "list_item_max_chars": 0,
         "formulas_max": 6,
         "images_min": 0,
         "images_max": 0,
-        "caption_max_chars": 0,
-        "text_total_max_chars_full": 383
+        "caption_max_chars": 0
       },
-      "budget_derivation": "S3（#18）重核（行距 1.5 实测 1.779em = 35.58pt@20pt、扣一段 12pt 段前）：title_max_chars 25 = floor((11.86−0.2)÷(28/72)×0.85)（28pt 降档单行 ×0.85，单行不受节奏影响）；text_block/text_total 125 = floor((11.86−0.2)÷(20/72) × ((2.0−0.1)×72−12)÷35.58 × 0.85)，text 区 @20pt（S2 203 → 125）；text_total_max_chars_full 383 = floor((11.86−0.2)÷(20/72) × ((5.58−0.1)×72−12)÷35.58 × 0.85)，text_full 区 @20pt（S2 586 → 383）；text_blocks_max 8 依 slide 11 短段落实证（text_full 区证据，非容量导出；含公式页 text 区 2.0in 高实际容 2–3 段，段堆叠由 G2 溢出门兜底）"
+      "budget_derivation": "S6 密度重设计：公式区/文字区/全高文字区合并为单一 content 流区（0.74,1.11,11.86,5.58，即原 text_full 几何）——模板作者的公式页本就是「居中公式行 + 左对齐正文」混排于一个内容框（实测其页均 86–458 字），拆区导致每页仅一句话。多行容量 = (11.66×72÷20)字/行 × ((5.58×72−12)÷35.58)行 × 0.85 = 41×10×0.85 = 383（body 20pt、行距 1.5、段前 12pt，S3 COM 实测音高 35.58pt/行）；公式行按 OMML 壳自带节奏（130% 行距 + 16pt 段前）占行，其纵向代价由 0.85 安全系数与 G2 COM 溢出门吸收，formulas_max 6 仍封顶。text_total_max_chars_full 机制保留（他页型可用），本页型不再需要。"
     },
     "text-image": {
       "purpose": "图文混排：小标题 + 文字块 + 1–4 张浮动图（可带图注）",
@@ -509,15 +496,15 @@
         },
         "chart": {
           "x": 0.95,
-          "y": 1.6,
-          "w": 9.6,
-          "h": 5.3
+          "y": 1.4,
+          "w": 11.4,
+          "h": 3.6
         },
         "comment": {
-          "x": 10.7,
-          "y": 2.0,
-          "w": 2.5,
-          "h": 2.4
+          "x": 0.95,
+          "y": 5.15,
+          "w": 11.4,
+          "h": 1.55
         },
         "page_number": {
           "x": 11.96,
@@ -529,8 +516,8 @@
       "budget": {
         "title_max_chars": 25,
         "text_blocks_max": 1,
-        "text_block_max_chars": 37,
-        "text_total_max_chars": 37,
+        "text_block_max_chars": 110,
+        "text_total_max_chars": 110,
         "subhead_max_chars": 0,
         "list_items_max": 0,
         "list_item_max_chars": 0,
@@ -539,7 +526,7 @@
         "images_max": 1,
         "caption_max_chars": 0
       },
-      "budget_derivation": "S3（#18）重核（行距 1.5 实测 1.779em = 32.02pt@18pt、扣一段 12pt 段前）：title_max_chars 25 = floor((11.86−0.2)÷(28/72)×0.85)；text_block/total 37 = floor((2.5−0.2)÷(18/72) × ((2.4−0.1)×72−12)÷32.02 × 0.85)，comment 区 @18pt 次级（S2 59 → 37，字号未变）"
+      "budget_derivation": "S6 密度重设计：图表放宽至 11.4in 全宽（原 9.6×5.3），评注改为图下全宽横带（0.95,5.15,11.4,1.55）——模板实验页实测 86–173 字，2.5in 侧栏上限 37 字撑不起。多行容量 = (11.2×72÷18)字/行 × ((1.55×72−12)÷32.02)行 × 0.85 = 44×3×0.85 = 110（secondary 18pt、行距 1.5、段前 12pt）。"
     },
     "closing": {
       "purpose": "结束页：致谢语（+ 可选汇报人行）；封面的内容变体",
