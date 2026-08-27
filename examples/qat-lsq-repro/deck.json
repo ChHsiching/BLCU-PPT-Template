@@ -8,14 +8,23 @@
     {
       "archetype": "cover",
       "blocks": [
-        { "type": "title", "text": "量化感知训练复现与实验分析" },
-        { "type": "text", "text": "汇报人:李然 2026-08-27" }
+        {
+          "type": "title",
+          "text": "量化感知训练复现与实验分析"
+        },
+        {
+          "type": "text",
+          "text": "汇报人：李然 2026-08-27"
+        }
       ]
     },
     {
       "archetype": "agenda",
       "blocks": [
-        { "type": "title", "text": "汇报大纲" },
+        {
+          "type": "title",
+          "text": "汇报大纲"
+        },
         {
           "type": "list",
           "items": [
@@ -31,7 +40,10 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "背景：均匀量化与反量化" },
+        {
+          "type": "title",
+          "text": "背景：均匀量化与反量化"
+        },
         {
           "type": "formula",
           "latex": "Q(x) = \\mathrm{clamp}\\left(\\left\\lfloor x/s \\right\\rceil + z,\\ 0,\\ 2^{b}-1\\right), \\qquad \\bar{x} = s\\left(Q(x) - z\\right)"
@@ -49,10 +61,13 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "背景：后训练量化的精度塌陷" },
+        {
+          "type": "title",
+          "text": "背景：后训练量化的精度塌陷"
+        },
         {
           "type": "formula",
-          "latex": "\\frac{\\partial \\bar{x}}{\\partial x} = s \\cdot \\frac{\\partial \\left\\lfloor x/s \\right\\rceil}{\\partial x} = 0 \\quad \\mathrm{a.e.}"
+          "latex": "\\frac{\\partial \\bar{x}}{\\partial x} = s \\cdot \\frac{\\partial \\left\\lfloor x/s \\right\\rceil}{\\partial x} = 0 \\;\\; \\text{(a.e.)}"
         },
         {
           "type": "text",
@@ -67,7 +82,10 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "方法：伪量化与直通估计" },
+        {
+          "type": "title",
+          "text": "方法：伪量化与直通估计"
+        },
         {
           "type": "formula",
           "latex": "\\bar{x} = s \\cdot \\mathrm{clamp}\\left(\\left\\lfloor x/s \\right\\rceil,\\ -2^{b-1},\\ 2^{b-1}-1\\right)"
@@ -89,14 +107,17 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "方法：LSQ 可学习步长" },
+        {
+          "type": "title",
+          "text": "方法：LSQ 可学习步长"
+        },
         {
           "type": "formula",
           "latex": "\\frac{\\partial \\mathcal{L}}{\\partial s} = \\sum_{x} \\frac{\\partial \\mathcal{L}}{\\partial \\bar{x}} \\left( \\left\\lfloor x/s \\right\\rceil - x/s \\right)"
         },
         {
           "type": "text",
-          "text": "LSQ 把步长 s 变成可训练参数：舍入残差 round(x/s) − x/s 自带符号，逐层告诉 s 该放宽还是收窄。步长用独立学习率 η/√(2^b) 更新，避免与主学习率互相干扰。"
+          "text": "LSQ 把步长 s 变成可训练参数：舍入残差 round(x/s) − x/s 自带符号，逐层告诉 s 该放宽还是收窄。步长用独立学习率（η 除以 2 的 b/2 次方）更新，避免与主学习率互相干扰。"
         },
         {
           "type": "text",
@@ -107,8 +128,14 @@
     {
       "archetype": "text-image",
       "blocks": [
-        { "type": "title", "text": "复现设置：数据、网络与超参" },
-        { "type": "subhead", "text": "训练流程与量化插入位置" },
+        {
+          "type": "title",
+          "text": "复现设置：数据、网络与超参"
+        },
+        {
+          "type": "subhead",
+          "text": "训练流程与量化插入位置"
+        },
         {
           "type": "text",
           "text": "CIFAR-100 上复现：伪量化插进每个 Conv–BN–ReLU 单元的权重与激活，整网浮点联合训练 100 epoch。"
@@ -132,7 +159,10 @@
     {
       "archetype": "chart-focus",
       "blocks": [
-        { "type": "title", "text": "实验：验证精度曲线" },
+        {
+          "type": "title",
+          "text": "实验：验证精度曲线"
+        },
         {
           "type": "image",
           "path": "material/images/val-curves.png"
@@ -146,7 +176,10 @@
     {
       "archetype": "chart-focus",
       "blocks": [
-        { "type": "title", "text": "实验：比特宽度扫描" },
+        {
+          "type": "title",
+          "text": "实验：比特宽度扫描"
+        },
         {
           "type": "image",
           "path": "material/images/bitwidth-bars.png"
@@ -160,7 +193,10 @@
     {
       "archetype": "chart-focus",
       "blocks": [
-        { "type": "title", "text": "消融：步长初始化倍率" },
+        {
+          "type": "title",
+          "text": "消融：步长初始化倍率"
+        },
         {
           "type": "image",
           "path": "material/images/stepscale-ablation.png"
@@ -174,7 +210,10 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "结论：复现发现与后续计划" },
+        {
+          "type": "title",
+          "text": "结论：复现发现与后续计划"
+        },
         {
           "type": "text",
           "text": "复现结论：W4A4 上 LSQ 把 PTQ 的 61.3% 找回到 76.2%，距 FP16 基线剩 2.2 个百分点；增益来自**可学习步长**与直通估计的叠加，步长初始化同样关键（r = 2.0 最优）。"

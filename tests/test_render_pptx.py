@@ -520,8 +520,10 @@ def test_render_full_fixture(tmp_path):
         assert sp.left >= 0 and sp.top >= 0
         assert sp.left + sp.width <= canvas_w + 2
         assert sp.top + sp.height <= canvas_h + 2
-    # the safe geometry replaces the original overflow: list bottom at 6.8, not 10.0
-    assert item_list.top + item_list.height == pytest.approx(Inches(6.8), abs=2)
+    # the safe geometry replaces the original overflow (was bottom 10.0);
+    # S6 r2: the region is y1.11 h5.2, centered on the band-to-footer usable
+    # area, so the box bottom sits at 6.31 with anchor=ctr centering the list
+    assert item_list.top + item_list.height == pytest.approx(Inches(6.31), abs=2)
 
     # -- page 3 still carries its native OMML formulas
     assert omath_count(prs.slides[2]) == 2

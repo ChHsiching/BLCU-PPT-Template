@@ -706,8 +706,10 @@ def fill_agenda(slide, page: dict, arch: dict, manifest: dict) -> None:
                                             algn="ctr")])
     _sp_tree(el).append(label)
     if items:  # a list block is optional; never emit an empty txBody
+        # sparse agenda lists vertically center in their region (mirror of
+        # the ContentArea flow: bottom-anchored emptiness reads as imbalance)
         box = _textbox_shape("AgendaList", arch["regions"]["list"],
-                             _next_shape_id(el), tokens)
+                             _next_shape_id(el), tokens, anchor="ctr")
         _fill_textbox(box, [_styled_paragraph(item, list_style, tokens,
                                               rhythm=True, emphasis=True)
                             for item in items])

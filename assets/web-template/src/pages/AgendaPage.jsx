@@ -32,6 +32,9 @@ export function AgendaPage({ page, arch, revealed }) {
           data-rhythm="1"
           style={{
             ...regionStyle(arch.regions.list),
+            // vertically center a sparse list, like the pptx anchor="ctr":
+            // bottom-anchored emptiness reads as imbalance
+            display: 'flex', flexDirection: 'column', justifyContent: 'center',
             ...textboxPadding(),
             ...rhythmLineHeight(),
             ...regionRole(page.archetype, 'list'),

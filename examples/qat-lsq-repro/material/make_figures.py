@@ -96,9 +96,14 @@ def bitwidth_bars(path):
             ax.text(bar.get_x() + bar.get_width() / 2, m + s + label_offset[i],
                     f"{m:.1f}", ha="center", fontsize=9,
                     bbox=dict(facecolor="white", edgecolor="none", pad=1.2))
-    ax.axhline(FP16[0], linewidth=1.4, linestyle="--", color="#222222")
-    ax.text(2.7, FP16[0] + 0.12, f"FP16 基线 {FP16[0]:.1f}%", fontsize=10,
-            ha="right", color="#222222")
+    ax.axhline(FP16[0], linewidth=1.4, linestyle="--", color="#222222",
+               zorder=3)
+    # annotation INSIDE the axes with margin so neither the glyphs nor the
+    # white backing box ever touch the dashed line or the right spine
+    ax.set_xlim(-0.55, 3.35)
+    ax.text(3.25, FP16[0] + 0.45, f"FP16 基线 {FP16[0]:.1f}%", fontsize=10,
+            ha="right", va="bottom", color="#222222", zorder=5,
+            bbox=dict(facecolor="white", edgecolor="none", pad=1.5))
     ax.set_xticks(list(xs))
     ax.set_xticklabels(BITWIDTHS)
     ax.set_ylabel("最终测试精度（%）")
