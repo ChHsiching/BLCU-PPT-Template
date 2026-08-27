@@ -8,14 +8,23 @@
     {
       "archetype": "cover",
       "blocks": [
-        { "type": "title", "text": "AdamW 优化器复现与实验分析" },
-        { "type": "text", "text": "汇报人:陈晨 2026-08-26" }
+        {
+          "type": "title",
+          "text": "AdamW 优化器复现与实验分析"
+        },
+        {
+          "type": "text",
+          "text": "汇报人:陈晨 2026-08-26"
+        }
       ]
     },
     {
       "archetype": "agenda",
       "blocks": [
-        { "type": "title", "text": "汇报大纲" },
+        {
+          "type": "title",
+          "text": "汇报大纲"
+        },
         {
           "type": "list",
           "items": [
@@ -31,7 +40,10 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "背景：L2 正则与学习率的耦合" },
+        {
+          "type": "title",
+          "text": "背景：L2 正则与学习率的耦合"
+        },
         {
           "type": "formula",
           "latex": "g_t = \\nabla f(\\theta_{t-1}) + \\lambda \\theta_{t-1}"
@@ -49,7 +61,10 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "背景：耦合更新与正则漂移" },
+        {
+          "type": "title",
+          "text": "背景：耦合更新与正则漂移"
+        },
         {
           "type": "formula",
           "latex": "\\theta_t = \\theta_{t-1} - \\eta \\frac{\\hat{m}_t}{\\sqrt{\\hat{v}_t} + \\epsilon}"
@@ -67,7 +82,10 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "方法：矩估计与偏差修正" },
+        {
+          "type": "title",
+          "text": "方法：矩估计与偏差修正"
+        },
         {
           "type": "formula",
           "latex": "m_t = \\beta_1 m_{t-1} + (1-\\beta_1) g_t, \\quad v_t = \\beta_2 v_{t-1} + (1-\\beta_2) g_t^2"
@@ -89,7 +107,10 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "方法：AdamW 解耦更新" },
+        {
+          "type": "title",
+          "text": "方法：AdamW 解耦更新"
+        },
         {
           "type": "formula",
           "latex": "\\theta_t = \\theta_{t-1} - \\eta \\left( \\frac{\\hat{m}_t}{\\sqrt{\\hat{v}_t} + \\epsilon} + \\lambda \\theta_{t-1} \\right)"
@@ -107,8 +128,14 @@
     {
       "archetype": "text-image",
       "blocks": [
-        { "type": "title", "text": "复现设置：数据、网络与超参" },
-        { "type": "subhead", "text": "训练流程与关键超参" },
+        {
+          "type": "title",
+          "text": "复现设置：数据、网络与超参"
+        },
+        {
+          "type": "subhead",
+          "text": "训练流程与关键超参"
+        },
         {
           "type": "text",
           "text": "三种优化器共享数据、网络与训练计划，仅优化器与正则方式不同。"
@@ -132,7 +159,10 @@
     {
       "archetype": "chart-focus",
       "blocks": [
-        { "type": "title", "text": "实验：训练损失曲线" },
+        {
+          "type": "title",
+          "text": "实验：训练损失曲线"
+        },
         {
           "type": "image",
           "path": "material/images/loss-curves.png"
@@ -146,7 +176,10 @@
     {
       "archetype": "chart-focus",
       "blocks": [
-        { "type": "title", "text": "实验：最终测试精度" },
+        {
+          "type": "title",
+          "text": "实验：最终测试精度"
+        },
         {
           "type": "image",
           "path": "material/images/acc-bars.png"
@@ -160,7 +193,10 @@
     {
       "archetype": "chart-focus",
       "blocks": [
-        { "type": "title", "text": "补充消融：λ 扫描" },
+        {
+          "type": "title",
+          "text": "补充消融：λ 扫描"
+        },
         {
           "type": "image",
           "path": "material/images/lambda-ablation.png"
@@ -174,7 +210,10 @@
     {
       "archetype": "text-formula",
       "blocks": [
-        { "type": "title", "text": "结论：复现发现与后续计划" },
+        {
+          "type": "title",
+          "text": "结论：复现发现与后续计划"
+        },
         {
           "type": "text",
           "text": "复现结论：解耦权重衰减在 ResNet-18/CIFAR-10 上带来**稳定增益**（+1.3 个百分点、种子间方差减半），与此前调参遇到的「weight_decay 不灵敏」现象一致——问题不在调参力度，在耦合本身。"
@@ -183,13 +222,6 @@
           "type": "text",
           "text": "后续：在 ImageNet 子集与 Transformer 结构上验证解耦的增益是否保持；检查不同 λ 与学习率的交互。"
         }
-      ]
-    },
-    {
-      "archetype": "closing",
-      "blocks": [
-        { "type": "title", "text": "谢谢聆听" },
-        { "type": "text", "text": "汇报人:陈晨" }
       ]
     }
   ]
