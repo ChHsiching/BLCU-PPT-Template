@@ -186,6 +186,20 @@ def first_para_props(sp):
             int(bef.get("val")) // 100 if bef is not None else 0)
 
 
+def prose_para_props(sp):
+    """(line_spacing_pct, space_before_pt) of the first a:r-carrying paragraph
+    (math paragraphs lead formula-first content flows)."""
+    for p_el in sp._element.iter(f"{{{NS_A}}}p"):
+        if p_el.find(f"{{{NS_A}}}r") is None:
+            continue
+        pPr = p_el.find(f"{{{NS_A}}}pPr")
+        ln = pPr.find(f"{{{NS_A}}}lnSpc/{{{NS_A}}}spcPct") if pPr is not None else None
+        bef = pPr.find(f"{{{NS_A}}}spcBef/{{{NS_A}}}spcPts") if pPr is not None else None
+        return (int(ln.get("val")) // 1000 if ln is not None else None,
+                int(bef.get("val")) // 100 if bef is not None else 0)
+    return (None, 0)
+
+
 def body_insets(sp):
     bodyPr = sp._element.find(f".//{{{NS_A}}}bodyPr")
     return tuple(int(bodyPr.get(k)) for k in ("lIns", "tIns", "rIns", "bIns"))
@@ -273,22 +287,35 @@ def test_render_pipeline(tmp_path):
         assert rPr.get("sz") == "2000"
         latin = rPr.find(f"{{{NS_A}}}latin")
         assert latin is not None and latin.get("typeface") == "Cambria Math"
-    # content boxes: exactly formula area + text area, at manifest regions
+    # content: ONE full-height flow box — formulas and prose interleaved
+    # (the template author's idiom; S6 density redesign)
     boxes = non_placeholder_shapes(s2)
-    assert len(boxes) == 2
-    formula_box, text_box = sorted(boxes, key=lambda sp: sp.top)
-    assert_region(formula_box, arch["text-formula"]["regions"]["formula"])
-    assert_region(text_box, arch["text-formula"]["regions"]["text"])
-    assert run_style(text_box) == (20, False, "000000", NOTO, NOTO)
-    assert text_box.text_frame.text == deck["pages"][1]["blocks"][3]["text"]
+    assert len(boxes) == 1
+    flow = boxes[0]
+    assert flow.name == "ContentArea"
+    assert_region(flow, arch["text-formula"]["regions"]["content"])
+    # the prose paragraph carries the body style (math runs style themselves)
+    paras = flow.text_frame.paragraphs
+    assert paras[-1].text == deck["pages"][1]["blocks"][3]["text"]
+    prose_rPr = paras[-1]._p.find(f"{{{NS_A}}}r/{{{NS_A}}}rPr")
+    assert (int(prose_rPr.get("sz")) // 100, prose_rPr.get("b")) == (20, "0")
+    ea = prose_rPr.find(f"{{{NS_A}}}ea")
+    assert ea is not None and ea.get("typeface") == NOTO
+    # the content flow vertically centers in the full-height region
+    anchor = flow._element.find(
+        f"{{{NS_P}}}txBody/{{{NS_A}}}bodyPr").get("anchor")
+    assert anchor == "ctr"
 
-    # -- slide 3: pure-text variant uses the full-height region, body role
+    # -- slide 3: pure-text variant centers in the full-height flow region
     s3 = prs.slides[2]
     assert omath_count(s3) == 0
     assert by_ph(s3, "sldNum") is not None
     boxes3 = non_placeholder_shapes(s3)
     assert len(boxes3) == 1
-    assert_region(boxes3[0], arch["text-formula"]["regions"]["text_full"])
+    assert_region(boxes3[0], arch["text-formula"]["regions"]["content"])
+    anchor = boxes3[0]._element.find(
+        f"{{{NS_P}}}txBody/{{{NS_A}}}bodyPr").get("anchor")
+    assert anchor == "ctr"
     assert run_style(boxes3[0]) == (20, False, "000000", NOTO, NOTO)
     # markers are stripped from the rendered text (they become styled runs)
     assert boxes3[0].text_frame.text == (
@@ -363,16 +390,15 @@ def test_formula_fallback_renders_images(tmp_path, monkeypatch):
 
     s2 = result.presentation.slides[1]
     assert omath_count(s2) == 0
-    formula_region = manifest["archetypes"]["text-formula"]["regions"]["formula"]
-    text_region = manifest["archetypes"]["text-formula"]["regions"]["text"]
+    content = manifest["archetypes"]["text-formula"]["regions"]["content"]
     pics = [sp for sp in non_placeholder_shapes(s2) if sp.shape_type == 13]  # PICTURE
     assert len(pics) == 2
     assert result.stats.formulas_fallback == 2
     for pic in pics:
-        assert pic.top >= Inches(formula_region["y"]) - 2
-        # the manifest lets the formula/text regions overlap by design; native
-        # flow never enters that band and fallback images must not either
-        assert pic.top + pic.height <= Inches(text_region["y"]) + 2
+        # fallback images stack inside the content region's lower band,
+        # clear of the native-paragraph headroom above
+        assert pic.top >= Inches(content["y"]) - 2
+        assert pic.top + pic.height <= Inches(content["y"]) + Inches(content["h"]) + 2
 
 
 # ---------------------------------------------------------------------------
@@ -494,8 +520,10 @@ def test_render_full_fixture(tmp_path):
         assert sp.left >= 0 and sp.top >= 0
         assert sp.left + sp.width <= canvas_w + 2
         assert sp.top + sp.height <= canvas_h + 2
-    # the safe geometry replaces the original overflow: list bottom at 6.8, not 10.0
-    assert item_list.top + item_list.height == pytest.approx(Inches(6.8), abs=2)
+    # the safe geometry replaces the original overflow (was bottom 10.0);
+    # S6 r2: the region is y1.11 h5.2, centered on the band-to-footer usable
+    # area, so the box bottom sits at 6.31 with anchor=ctr centering the list
+    assert item_list.top + item_list.height == pytest.approx(Inches(6.31), abs=2)
 
     # -- page 3 still carries its native OMML formulas
     assert omath_count(prs.slides[2]) == 2
@@ -615,7 +643,7 @@ def test_emphasis_marker_renders_green_bold_inline_runs():
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     result = rp.render_deck(deck, manifest, TEMPLATE_PPTX)
     box = next(sp for sp in non_placeholder_shapes(result.presentation.slides[2])
-               if sp.name == "TextFullArea")
+               if sp.name == "ContentArea")
     runs = shape_runs(box)
     # markers never survive into a:t text; the keyword becomes its own run
     assert all("**" not in (r[0] or "") for r in runs)
@@ -637,7 +665,7 @@ def test_unmatched_emphasis_marker_stays_literal():
     manifest = json.loads(MANIFEST_PATH.read_text(encoding="utf-8"))
     result = rp.render_deck(deck, manifest, TEMPLATE_PPTX)
     box = next(sp for sp in non_placeholder_shapes(result.presentation.slides[2])
-               if sp.name == "TextFullArea")
+               if sp.name == "ContentArea")
     # unpaired and empty markers both stay literal — never an empty paragraph
     assert [(r[0], r[2]) for r in shape_runs(box)] == [
         ("不带成对标记的 ** 星号正文", False),
@@ -670,7 +698,7 @@ def test_emphasis_is_body_only_and_covers_body_flow_roles():
     assert shape_runs(cover_sub) == [("汇报人:张三 **强调** 2026-08-25",
                                       24, False, "000000")]
     body_box = next(sp for sp in non_placeholder_shapes(prs.slides[3])
-                    if sp.name == "TextFullArea")
+                    if sp.name == "ContentArea")
     assert ("关键词", 20, True, "548235") in shape_runs(body_box)
     agenda_list = next(sp for sp in non_placeholder_shapes(prs.slides[1])
                        if sp.name == "AgendaList")
@@ -693,8 +721,11 @@ def test_body_rhythm_and_insets_follow_tokens():
         return next(sp for sp in non_placeholder_shapes(slide) if sp.name == name)
 
     # flowing body text carries the rhythm: line spacing 1.5, before 12pt
-    assert first_para_props(by_name(prs.slides[2], "TextArea")) == (150, 12)
-    assert first_para_props(by_name(prs.slides[3], "TextFullArea")) == (150, 12)
+    # (formula-first flows open with the OMML shell's 130%/16pt rhythm)
+    flow2 = by_name(prs.slides[2], "ContentArea")
+    assert first_para_props(flow2) == (130, 16)
+    assert prose_para_props(flow2) == (150, 12)
+    assert first_para_props(by_name(prs.slides[3], "ContentArea")) == (150, 12)
     assert first_para_props(by_name(prs.slides[1], "AgendaList")) == (150, 12)
     assert first_para_props(by_name(prs.slides[4], "TextArea")) == (150, 12)
     assert first_para_props(by_name(prs.slides[5], "CommentArea")) == (150, 12)

@@ -23,6 +23,16 @@ single source of truth). Checks, each a finding on failure:
             .content_bottom_y; zero speaker notes (演讲稿 is a separate
             deliverable); pages referencing images carry at least that many
             embedded pictures (formula fallbacks may add more)
+  style     run-level typography.tokens: every content run carries the token
+            family on ea+latin (font consistency page to page), role-bound
+            shapes match their role's size/weight/color (weight hierarchy;
+            **emphasis** runs green-bold only inside body-flow shapes), math
+            runs stay Cambria Math at the formula size, and any run color
+            outside the token role colors is flagged (band color never a
+            text color; accent only as bold)
+  brand     every slide inherits a master carrying its manifest brand_layer
+            group: the band rect and each logo picture at the measured
+            geometry, logo media matching the declared file name
 
 --com-screenshots DIR adds the optional PowerPoint COM spot check: every slide
 exported as a PNG into DIR for visual overflow inspection. A missing COM
@@ -51,6 +61,8 @@ import validate_deck as vd  # noqa: E402
 NS_A = "http://schemas.openxmlformats.org/drawingml/2006/main"
 NS_M = "http://schemas.openxmlformats.org/officeDocument/2006/math"
 NS_P = "http://schemas.openxmlformats.org/presentationml/2006/main"
+NS_R = "http://schemas.openxmlformats.org/officeDocument/2006/relationships"
+NS_SVG = "http://schemas.microsoft.com/office/drawing/2016/SVG/main"
 
 PICTURE_SHAPE_TYPE = 13  # MSO_SHAPE_TYPE.PICTURE, avoided as a hard import
 
@@ -216,6 +228,10 @@ def check_pptx(prs, deck: dict, manifest: dict, image_root: Path) -> list:
                     ))
             findings.extend(_check_geometry(sp, spath, manifest, is_picture))
 
+        # style + brand (#20): run-level tokens and the inherited master
+        findings.extend(_check_style(slide, page, spath, manifest))
+        findings.extend(_check_brand(slide, page, spath, manifest))
+
         if page is not None:
             n_images = _deck_image_count(page)
             if n_pictures < n_images:
@@ -267,6 +283,356 @@ def _check_geometry(sp, spath: str, manifest: dict, is_picture: bool) -> list:
             f"'{sp.name}' bottom edge {bottom:.2f} crosses safe_canvas "
             f"content_bottom_y {content_bottom}",
         ))
+    return findings
+
+
+# ---------------------------------------------------------------------------
+# style layer (#20): typography.tokens at run level + master brand layer
+# ---------------------------------------------------------------------------
+
+# renderer textbox name -> (role_bindings region key, emphasis runs allowed).
+# Both columns mirror what render_pptx actually consumes: fill_text_formula
+# interleaves formulas and prose in one ContentArea flow styled from the
+# `text` binding, and fill_text_image styles TextColumn from `text` as well
+# (the manifest's text_full/text_column keys are web-side synonyms bound to
+# the same roles). The emphasis column mirrors the renderer's emphasis=True
+# fill sites: only body-flow shapes ever carry **keyword** runs; ceremonial
+# single-line roles keep markers literal.
+_SHAPE_ROLES = {
+    "AgendaLabel": ("label", False),
+    "AgendaList": ("list", True),
+    "ContentArea": ("text", True),   # text-formula unified content flow
+    "TextArea": ("text", True),      # text-image multi-slot text region
+    "TextColumn": ("text", True),
+    "SubheadArea": ("subhead", False),
+    "CommentArea": ("comment", True),
+}
+
+
+def _subdict(parent, key: str) -> dict:
+    """The child dict at parent[key]; {} for anything missing or malformed —
+    manifests are hand-editable (variant manifests are a supported flow), and
+    the gate's contract is findings-or-skip, never a traceback."""
+    child = parent.get(key) if isinstance(parent, dict) else None
+    return child if isinstance(child, dict) else {}
+
+
+def _sublist(parent, key: str) -> list:
+    """The child list at parent[key]; [] unless it is a real list."""
+    child = parent.get(key) if isinstance(parent, dict) else None
+    return child if isinstance(child, list) else []
+
+
+def _hex6(color) -> str:
+    """"#548235" -> "548235"; already-bare and missing values pass through."""
+    return str(color).lstrip("#").upper() if color else ""
+
+
+def _role_of(sp, bindings: dict, roles: dict, title_text: str | None):
+    """(role_name, emphasis_allowed) a shape must render at, None-shaped when
+    the archetype binds no usable role for it (stray boxes answer only to the
+    sweeps). The title downgrade (44 -> 28 past title_long.over_chars) is
+    judged on the rendered title text, like the renderer. Binding values and
+    over_chars may be anything a hand-edited manifest left there — non-string
+    names and non-numeric thresholds degrade to no expectation."""
+    def bound(key):
+        name = bindings.get(key)
+        return name if isinstance(name, str) else None
+
+    def usable(name):
+        return name if isinstance(roles.get(name), dict) else None
+
+    pht = ph_type(sp)
+    if pht == "title":
+        name = bound("title")
+        long_role = roles.get("title_long")
+        # over_chars coerces like the renderer and layout.js do (numeric
+        # strings parse; anything unparseable means no downgrade)
+        try:
+            over = float(long_role.get("over_chars", float("inf"))) \
+                if isinstance(long_role, dict) else float("inf")
+        except (TypeError, ValueError):
+            over = float("inf")
+        if name == "title" and title_text and vd.text_width(title_text) > over:
+            name = "title_long"
+        return (usable(name), False)
+    if pht == "body":  # cover/closing subtitle; content body phs stay empty
+        return (usable(bound("subtitle")), False)
+    if sp.name.startswith("Caption"):
+        return (usable(bound("caption")), False)
+    if sp.name in _SHAPE_ROLES:
+        key, emph = _SHAPE_ROLES[sp.name]
+        return (usable(bound(key)), emph)
+    return None
+
+
+def _check_style(slide, page, spath: str, manifest: dict) -> list:
+    """Tokens at run level: font faces, role styles, math runs, colors.
+
+    Sweeps (font faces, text colors) cover every content run on every slide;
+    role expectations need the deck page's archetype and apply only to the
+    renderer's named shapes and placeholders. Malformed manifest sections
+    degrade to skip, never a traceback.
+    """
+    tokens = _subdict(_subdict(manifest, "typography"), "tokens")
+    if not tokens:
+        return []  # a manifest without the token tree: nothing to check against
+    roles = _subdict(tokens, "roles")
+    emph_cfg = _subdict(tokens, "emphasis")
+    emph_color = _hex6(emph_cfg.get("color"))
+    emph_bold = emph_cfg.get("weight", "bold") == "bold"  # renderer default
+    legal_colors = {_hex6(r.get("color")) for r in roles.values()
+                    if isinstance(r, dict) and isinstance(r.get("color"), str)}
+    legal_colors |= {emph_color}  # the (bold, emphasis-color) pair is legal
+    colors_cfg = _subdict(tokens, "colors")
+    accent = _hex6(colors_cfg.get("accent"))
+    band = _hex6(colors_cfg.get("band"))
+    archetype = page.get("archetype") if isinstance(page, dict) else None
+    # closing pages render through fill_cover's cover bindings (render_pptx
+    # treats closing as a content variant of cover) — the QA reads what the
+    # renderer reads
+    binding_arch = "cover" if archetype == "closing" else archetype
+    bindings = _subdict(_subdict(tokens, "role_bindings"), binding_arch or "__none__")
+    title_text = slide_title_text(slide)
+    findings: list[vd.Finding] = []
+
+    for sp in slide.shapes:
+        if ph_type(sp) == "sldNum":
+            continue  # 页码是母版自带字段（华文中宋），不属于内容样式域
+        where = f"{spath}.{sp.name}"
+        role_name, emph_ok = _role_of(sp, bindings, roles, title_text) or (None, False)
+        role = roles.get(role_name) if role_name else None
+        # only a well-formed role (dict with a numeric size_pt) yields a
+        # checkable expectation; anything else answers to the sweeps alone
+        if not isinstance(role, dict) or not isinstance(role.get("size_pt"), (int, float)):
+            role = None
+        # face expectation: the role's own face when it overrides (formula;
+        # a title-family variant manifest), else the global token family
+        face = role.get("face", tokens.get("face")) if role else tokens.get("face")
+        latin_face = role.get("face", tokens.get("latin_face")) if role else tokens.get("latin_face")
+        for r in sp._element.iter(f"{{{NS_A}}}r"):
+            text_el = r.find(f"{{{NS_A}}}t")
+            text = (text_el.text or "")[:16] if text_el is not None else ""
+            rPr = r.find(f"{{{NS_A}}}rPr")
+            latin = rPr.find(f"{{{NS_A}}}latin") if rPr is not None else None
+            ea = rPr.find(f"{{{NS_A}}}ea") if rPr is not None else None
+            if latin is None or ea is None:
+                findings.append(vd.Finding(
+                    where, "pptx.font_face",
+                    f"run {text!r} lacks an explicit ea/latin typeface; the "
+                    f"tokens family is {face!r} (no inheritance)",
+                ))
+            else:
+                for el, want, kind in ((latin, latin_face, "latin"),
+                                       (ea, face, "ea")):
+                    if el.get("typeface") != want:
+                        findings.append(vd.Finding(
+                            where, "pptx.font_face",
+                            f"run {text!r} {kind} typeface "
+                            f"{el.get('typeface')!r} != tokens face {want!r}",
+                        ))
+            srgb = rPr.find(f"{{{NS_A}}}solidFill/{{{NS_A}}}srgbClr") \
+                if rPr is not None else None
+            color = _hex6(srgb.get("val")) if srgb is not None else ""
+            if color and color not in legal_colors:
+                detail = (f"the band color {band} is never a text color"
+                          if color == band else
+                          f"#{color} is not a tokens role color")
+                findings.append(vd.Finding(
+                    where, "pptx.text_color", f"run {text!r}: {detail}"))
+            if role is not None:
+                findings.extend(_check_role_run(
+                    rPr, text, role, role_name, emph_ok, emph_color, emph_bold,
+                    accent, color, where))
+        if sp.name == "FormulaArea" or sp.name == "ContentArea":
+            # math runs live inside the unified content flow; the check is
+            # keyed on the runs themselves so it follows wherever they land
+            formula_role = roles.get("formula")
+            if not isinstance(formula_role, dict) or \
+                    not isinstance(formula_role.get("size_pt"), (int, float)):
+                formula_role = None  # malformed formula role: unverifiable
+            findings.extend(_check_math_runs(sp, formula_role, where))
+        if sp.name == "ContentArea":
+            # the content flow vertically centers in the full-height region:
+            # a partial page reads as composed breathing room, a top-anchored
+            # one as a bottom void (renderer-web mirrors with flex centering)
+            bodyPr = sp._element.find(
+                f"{{{NS_P}}}txBody/{{{NS_A}}}bodyPr")
+            anchor = bodyPr.get("anchor", "t") if bodyPr is not None else "t"
+            if anchor != "ctr":
+                findings.append(vd.Finding(
+                    where, "pptx.role_style",
+                    f"ContentArea anchor {anchor!r}; the content-flow design "
+                    f"centers it vertically (anchor='ctr')"))
+    return findings
+
+
+def _check_role_run(rPr, text, role: dict, role_name: str, emph_ok: bool,
+                    emph_color: str, emph_bold: bool, accent: str,
+                    color: str, where: str) -> list:
+    """One run against its role: size always; weight+color as a pair — the
+    role pair, or the (bold, emphasis-color) pair inside body-flow shapes.
+    The pairing is the doctrine: bold in body flow *is* the emphasis variant,
+    and the accent color rides only bold runs. A missing rPr is itself a
+    finding — the renderer styles every run explicitly."""
+    if rPr is None:
+        return [vd.Finding(
+            where, "pptx.role_style",
+            f"run {text!r} has no rPr; role '{role_name}' expects "
+            f"{role['size_pt']}pt {role.get('weight')} {role.get('color')}")]
+    findings = []
+    want_sz = str(int(role["size_pt"]) * 100)
+    if rPr.get("sz") != want_sz:
+        findings.append(vd.Finding(
+            where, "pptx.role_style",
+            f"run {text!r}: font-size rendered {rPr.get('sz')}, role "
+            f"'{role_name}' expects {want_sz} ({role['size_pt']}pt)"))
+    want_b = "1" if role.get("weight") == "bold" else "0"
+    want_color = _hex6(role.get("color"))
+    # the emphasis variant mirrors the renderer's own semantics
+    # (render_pptx._styled_paragraph): bold only when emphasis.weight says
+    # bold, and the emphasis color with a per-role fallback when the token
+    # is absent — a variant manifest may legally re-point either
+    variants = {(want_b, want_color)}
+    if emph_ok:
+        variants.add(("1" if emph_bold else want_b, emph_color or want_color))
+    got_b = rPr.get("b")
+    if (got_b, color) not in variants:
+        if not color:
+            detail = (f"no explicit solidFill; role '{role_name}' expects "
+                      f"{role.get('color')}")
+        elif color == accent and want_b == "0":
+            detail = (f"accent #{accent} rides only bold runs (emphasis or "
+                      f"subhead); role '{role_name}' expects {role.get('color')}")
+        elif got_b == "1" and want_b == "0":
+            detail = (f"font-weight rendered '1' with color #{color}; bold in "
+                      f"body flow is the emphasis variant and pairs with "
+                      f"#{emph_color or _hex6(role.get('color'))}")
+        else:
+            detail = (f"weight/color ({got_b!r}, #{color}) is neither the "
+                      f"role '{role_name}' pair ({want_b!r}, {role.get('color')})"
+                      f" nor the emphasis variant ('1', #{emph_color or _hex6(role.get('color'))})")
+        findings.append(vd.Finding(
+            where, "pptx.role_style", f"run {text!r}: {detail}"))
+    return findings
+
+
+def _check_math_runs(sp, formula_role: dict | None, where: str) -> list:
+    """Math runs stay on the formula face/size (OMML hard constraint, outside
+    the content family token)."""
+    if not formula_role:
+        return []
+    findings = []
+    want_face = formula_role.get("face")
+    want_sz = str(int(formula_role["size_pt"]) * 100)
+    tags = (f"{{{NS_M}}}r", f"{{{NS_M}}}ctrlPr")
+    for el in list(sp._element.iter(tags[0])) + list(sp._element.iter(tags[1])):
+        rPr = el.find(f"{{{NS_A}}}rPr")
+        latin = rPr.find(f"{{{NS_A}}}latin") if rPr is not None else None
+        face = latin.get("typeface") if latin is not None else None
+        if face != want_face:
+            findings.append(vd.Finding(
+                where, "pptx.font_face",
+                f"math run face {face!r} != formula face {want_face!r}"))
+        if rPr is None or rPr.get("sz") != want_sz:
+            findings.append(vd.Finding(
+                where, "pptx.role_style",
+                f"math run size {rPr.get('sz') if rPr is not None else None}, "
+                f"formula role expects {want_sz} ({formula_role['size_pt']}pt)"))
+    return findings
+
+
+# brand layer (#20): the master every slide inherits must carry the measured
+# brand geometry — bands as shapes at their manifest position, logos as
+# pictures whose blip (or svg fallback pair) matches the declared media name.
+
+def _shape_geo(sp):
+    try:
+        return (Emu(sp.left).inches, Emu(sp.top).inches,
+                Emu(sp.width).inches, Emu(sp.height).inches)
+    except (TypeError, AttributeError):
+        return None
+
+
+def _geo_close(sp, region: dict, tol: float = 0.05) -> bool:
+    geo = _shape_geo(sp)
+    return geo is not None and all(
+        abs(g - float(region[k])) <= tol
+        for g, k in zip(geo, ("x", "y", "w", "h")))
+
+
+def _pic_media_names(pic, master) -> set[str]:
+    """Media file names the picture references: the raster blip plus the SVG
+    source when the pic is an svg+png fallback pair."""
+    names = set()
+    el = pic._element
+    for tag, ns in ((f"{{{NS_A}}}blip", NS_R), (f"{{{NS_SVG}}}svgBlip", NS_R)):
+        node = el.find(f".//{tag}")
+        if node is None:
+            continue
+        rid = node.get(f"{{{ns}}}embed")
+        if rid and rid in master.part.rels:
+            names.add(str(master.part.rels[rid].target_ref).rsplit("/", 1)[-1])
+    return names
+
+
+def _region_of(entry) -> dict | None:
+    """The x/y/w/h region of a brand_layer entry, None when malformed."""
+    if not isinstance(entry, dict):
+        return None
+    try:
+        return {k: float(entry[k]) for k in ("x", "y", "w", "h")}
+    except (KeyError, TypeError, ValueError):
+        return None
+
+
+def _check_brand(slide, page, spath: str, manifest: dict) -> list:
+    if not isinstance(page, dict):
+        return []  # unaligned slide: the archetype (and its brand group) is unknown
+    bl = manifest.get("brand_layer")
+    bl = bl if isinstance(bl, dict) else {}
+    group = _subdict(bl, "cover") if page.get("archetype") in ("cover", "closing") \
+        else _subdict(bl, "content")
+    if not group:
+        return []  # a manifest without brand_layer: the web gate reports it
+    master = slide.slide_layout.slide_master
+    shapes = list(master.shapes)
+    findings = []
+    band_key = "mid_band" if "mid_band" in group else "top_band"
+    band_region = _region_of(group.get(band_key))
+    if band_region is None:
+        findings.append(vd.Finding(
+            spath, "pptx.brand_layer",
+            f"brand_layer group has no usable {band_key} region "
+            f"({group.get(band_key)!r})"))
+    elif not any(_geo_close(sp, band_region) for sp in shapes):
+        findings.append(vd.Finding(
+            spath, "pptx.brand_layer",
+            f"the master this slide inherits has no {band_key} at the measured "
+            f"geometry {band_region}"))
+    logos = [(f"logo[{i}]", logo) for i, logo in enumerate(_sublist(group, "logos"))]
+    for key in ("corner_logo", "corner_logo_bar"):
+        if key in group:
+            logos.append((key, group.get(key)))
+    for name, logo in logos:
+        region = _region_of(logo)
+        media = logo.get("media", "") if isinstance(logo, dict) else ""
+        if region is None:
+            findings.append(vd.Finding(
+                spath, "pptx.brand_layer",
+                f"brand_layer entry {name} ({logo!r}) is not a usable region"))
+            continue
+        found = any(
+            sp.shape_type == PICTURE_SHAPE_TYPE
+            and _geo_close(sp, region)
+            and media in _pic_media_names(sp, master)
+            for sp in shapes)
+        if not found:
+            findings.append(vd.Finding(
+                spath, "pptx.brand_layer",
+                f"the master this slide inherits lacks {name} ({media}) at "
+                f"the measured geometry "
+                f"({region['x']}, {region['y']}, {region['w']}, {region['h']})"))
     return findings
 
 

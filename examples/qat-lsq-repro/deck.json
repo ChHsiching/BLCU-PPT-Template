@@ -1,0 +1,228 @@
+{
+  "template": "blcu-report",
+  "meta": {
+    "presenter": "李然",
+    "date": "2026-08-27"
+  },
+  "pages": [
+    {
+      "archetype": "cover",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "量化感知训练复现与实验分析"
+        },
+        {
+          "type": "text",
+          "text": "汇报人：李然 2026-08-27"
+        }
+      ]
+    },
+    {
+      "archetype": "agenda",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "汇报大纲"
+        },
+        {
+          "type": "list",
+          "items": [
+            "一 背景：均匀量化与后训练塌陷",
+            "二 方法：直通估计与可学习步长",
+            "三 复现设置：数据、网络与超参",
+            "四 实验：训练曲线、比特扫描与消融",
+            "五 结论：复现发现与后续计划"
+          ]
+        }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "背景：均匀量化与反量化"
+        },
+        {
+          "type": "formula",
+          "latex": "Q(x) = \\mathrm{clamp}\\left(\\left\\lfloor x/s \\right\\rceil + z,\\ 0,\\ 2^{b}-1\\right), \\qquad \\bar{x} = s\\left(Q(x) - z\\right)"
+        },
+        {
+          "type": "text",
+          "text": "均匀量化把浮点张量压进 2^b 个级别：缩放系数 s 定步长、零点 z 定偏移，反量化再乘回 s。W8A8 的重建误差小到几乎无损，W4A4 则逐层累积、精度塌陷。"
+        },
+        {
+          "type": "text",
+          "text": "min–max 校准按张量统计极值；复现里权重用逐通道（per-channel）缩放，是保住 W4 精度的必要设置。"
+        }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "背景：后训练量化的精度塌陷"
+        },
+        {
+          "type": "formula",
+          "latex": "\\frac{\\partial \\bar{x}}{\\partial x} = s \\cdot \\frac{\\partial \\left\\lfloor x/s \\right\\rceil}{\\partial x} = 0 \\;\\; \\text{(a.e.)}"
+        },
+        {
+          "type": "text",
+          "text": "舍入几乎处处不可导：训完的网络直接换上量化算子（PTQ），梯度传不过量化器，逐层舍入误差无人修正。CIFAR-100 / ResNet-18 上 W4A4 从 78.4% 塌到 61.3%。"
+        },
+        {
+          "type": "text",
+          "text": "W8A8 只掉 0.3 个百分点（78.1%），比特越低塌得越狠。要让训练看见量化，得把量化算子插进训练循环。"
+        }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "方法：伪量化与直通估计"
+        },
+        {
+          "type": "formula",
+          "latex": "\\bar{x} = s \\cdot \\mathrm{clamp}\\left(\\left\\lfloor x/s \\right\\rceil,\\ -2^{b-1},\\ 2^{b-1}-1\\right)"
+        },
+        {
+          "type": "formula",
+          "latex": "\\frac{\\partial \\bar{x}}{\\partial x} := \\mathbf{1}\\left[\\ \\left|x\\right| \\le s \\cdot 2^{b-1}\\ \\right]"
+        },
+        {
+          "type": "text",
+          "text": "前向：BN 折叠进卷积后，权重与激活都过伪量化算子，用 x̄ 参与真实计算。反向：**直通估计**把量化器视作恒等，范围内梯度原样放行，训练得以穿过量化边界。"
+        },
+        {
+          "type": "text",
+          "text": "此时 s 仍由滑动 min–max 统计被动更新，步长本身没有进入优化目标，这正是 LSQ 要改的地方。"
+        }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "方法：LSQ 可学习步长"
+        },
+        {
+          "type": "formula",
+          "latex": "\\frac{\\partial \\mathcal{L}}{\\partial s} = \\sum_{x} \\frac{\\partial \\mathcal{L}}{\\partial \\bar{x}} \\left( \\left\\lfloor x/s \\right\\rceil - x/s \\right)"
+        },
+        {
+          "type": "text",
+          "text": "LSQ 把步长 s 变成可训练参数：舍入残差 round(x/s) − x/s 自带符号，逐层告诉 s 该放宽还是收窄。步长用独立学习率（η 除以 2 的 b/2 次方）更新，避免与主学习率互相干扰。"
+        },
+        {
+          "type": "text",
+          "text": "初始化 s0 = r·max|x|/2^(b−1)，主结果取 r = 2，r 的敏感性单独消融。**逐层独立步长**让量化网格贴住各层分布。"
+        }
+      ]
+    },
+    {
+      "archetype": "text-image",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "复现设置：数据、网络与超参"
+        },
+        {
+          "type": "subhead",
+          "text": "训练流程与量化插入位置"
+        },
+        {
+          "type": "text",
+          "text": "CIFAR-100 上复现：伪量化插进每个 Conv–BN–ReLU 单元的权重与激活，整网浮点联合训练 100 epoch。"
+        },
+        {
+          "type": "list",
+          "items": [
+            "数据：CIFAR-100，3 随机种子取均值",
+            "网络：ResNet-18，batch 128，余弦退火",
+            "基线：FP16 top-1 78.4% ± 0.2",
+            "对比：PTQ / QAT-STE / QAT-LSQ"
+          ]
+        },
+        {
+          "type": "image",
+          "path": "material/images/qat-pipeline.png",
+          "caption": "复现流程：伪量化插入与步长联合更新"
+        }
+      ]
+    },
+    {
+      "archetype": "chart-focus",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "实验：验证精度曲线"
+        },
+        {
+          "type": "image",
+          "path": "material/images/val-curves.png"
+        },
+        {
+          "type": "text",
+          "text": "三条训练曲线为 3 种子均值：LSQ 全程高于 STE，最终 76.2% 对 73.1%；虚线是 PTQ 换算子后的水平参考（61.3%），没有训练阶段。FP16 基线收敛于 78.4%。"
+        }
+      ]
+    },
+    {
+      "archetype": "chart-focus",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "实验：比特宽度扫描"
+        },
+        {
+          "type": "image",
+          "path": "material/images/bitwidth-bars.png"
+        },
+        {
+          "type": "text",
+          "text": "W8A8 近乎无损（PTQ/STE/LSQ：78.1 / 78.2 / 78.3）；W6A6 开始拉开（76.5 / 76.9 / 77.9）；W4A4 是分水岭（61.3 / 73.1 / **76.2**）：LSQ 比 PTQ 高 14.9 个百分点，距 FP16 基线 78.4% 差 2.2。"
+        }
+      ]
+    },
+    {
+      "archetype": "chart-focus",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "消融：步长初始化倍率"
+        },
+        {
+          "type": "image",
+          "path": "material/images/stepscale-ablation.png"
+        },
+        {
+          "type": "text",
+          "text": "W4A4、3 种子均值：r = 0.5 / 1.0 / 2.0 / 4.0 对应 73.6 / 75.4 / 76.2 / 74.8。r = 2.0 最优即主结果设置；初始化偏大一档开始伤精度（4.0 掉 1.4 个百分点）。"
+        }
+      ]
+    },
+    {
+      "archetype": "text-formula",
+      "blocks": [
+        {
+          "type": "title",
+          "text": "结论：复现发现与后续计划"
+        },
+        {
+          "type": "text",
+          "text": "复现结论：W4A4 上 LSQ 把 PTQ 的 61.3% 找回到 76.2%，距 FP16 基线剩 2.2 个百分点；增益来自**可学习步长**与直通估计的叠加，步长初始化同样关键（r = 2.0 最优）。"
+        },
+        {
+          "type": "text",
+          "text": "后续两个方向：把复现扩展到 ImageNet 子集与 MobileNet 结构；非对称零点对激活量化的影响单独消融。"
+        }
+      ]
+    }
+  ]
+}

@@ -272,11 +272,13 @@ class TestBudgets:
         assert "text_total_max_chars" in f.message and str(cap) in f.message
 
     def test_no_formula_page_uses_full_cap(self):
-        # 无公式页（text_full 区）允许放宽总量上限 text_total_max_chars_full
-        full = BUDGETS["text-formula"]["budget"]["text_total_max_chars_full"]
-        cap = BUDGETS["text-formula"]["budget"]["text_total_max_chars"]
-        assert full > cap
-        deck, _ = load_fixture()
+        # the optional text_total_max_chars_full relaxation stays a working
+        # mechanism for archetypes that declare it (text-formula no longer
+        # does — its S6 unified content region made the split unnecessary)
+        deck, manifest = load_fixture()
+        tf = manifest["archetypes"]["text-formula"]
+        cap = tf["budget"]["text_total_max_chars"]
+        tf["budget"]["text_total_max_chars_full"] = cap + 100
         # 取一个无公式的纯文字页（fixture 的纯文字变体页），塞入超过 cap 但低于 full 的文本
         page = next(p for p in deck["pages"] if p["archetype"] == "text-formula"
                     and not any(b["type"] == "formula" for b in p["blocks"]))
@@ -284,7 +286,7 @@ class TestBudgets:
             if b["type"] == "text":
                 b["text"] = ""
         page["blocks"].append({"type": "text", "text": "丙" * (cap + 10)})
-        findings = validate(deck)
+        findings = validate(deck, manifest)
         assert not any(f.code.startswith("budget.text") and f.path.endswith(
             f"pages[{deck['pages'].index(page)}]") for f in findings)
 
@@ -416,16 +418,46 @@ class TestS3BudgetRecheck:
 
     def test_rechecked_values_pinned(self):
         assert BUDGETS["agenda"]["budget"]["text_total_max_chars"] == 278
-        tf = BUDGETS["text-formula"]["budget"]
-        assert tf["text_block_max_chars"] == 125
-        assert tf["text_total_max_chars"] == 125
-        assert tf["text_total_max_chars_full"] == 383
         ti = BUDGETS["text-image"]["budget"]
         assert ti["text_block_max_chars"] == 135
         assert ti["text_total_max_chars"] == 135
+
+
+class TestS6DensityBudgetRecheck:
+    """S6 密度重核：以模板原件的实测内容量为基准（页均 86–458 字，
+    公式页 133–231 字 + 4–10 公式混排），text-formula 合并为单一全高
+    content 流区（公式区/文字区拆分导致每页仅一句话）、chart-focus
+    图表放宽为全宽 + 图下全宽评注带。算式见各 archetype 的
+    budget_derivation。
+    """
+
+    def test_rechecked_values_pinned(self):
+        tf = BUDGETS["text-formula"]["budget"]
+        assert tf["text_block_max_chars"] == 383
+        assert tf["text_total_max_chars"] == 383
+        assert "text_total_max_chars_full" not in tf  # 单一 content 区，不再分档
         cf = BUDGETS["chart-focus"]["budget"]
-        assert cf["text_block_max_chars"] == 37
-        assert cf["text_total_max_chars"] == 37
+        assert cf["text_block_max_chars"] == 110
+        assert cf["text_total_max_chars"] == 110
+
+    def test_text_formula_total_boundary(self):
+        # 恰达 383 过，384 拒（公式行自身占高由 0.85 安全系数与 G2 门吸收）
+        cap = BUDGETS["text-formula"]["budget"]["text_total_max_chars"]
+        deck, _ = load_fixture()
+        page = deck["pages"][2]
+        page["blocks"] = [
+            page["blocks"][0],                  # title
+            {"type": "text", "text": "一" * cap},
+        ]
+        assert validate(deck) == []
+        page["blocks"][1]["text"] = "一" * (cap + 1)
+        assert any(f.code == "budget.text_total_chars" for f in validate(deck))
+
+    def test_chart_focus_total_boundary(self):
+        cap = BUDGETS["chart-focus"]["budget"]["text_total_max_chars"]
+        assert validate(over(5, 2, "text", "一" * cap)) == []
+        findings = validate(over(5, 2, "text", "一" * (cap + 1)))
+        assert any(f.code == "budget.text_total_chars" for f in findings)
 
     def test_text_image_total_boundary(self):
         # total covers subhead + text + items — isolate a single text block so
