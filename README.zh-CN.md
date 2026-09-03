@@ -77,3 +77,14 @@ python -m pytest tests/
 ```
 
 架构与环境说明见 [AGENTS.md](AGENTS.md)，领域词汇表见 [CONTEXT.md](CONTEXT.md)。历史与进行中的工作见 [Issues](https://github.com/ChHsiching/BLCU-PPT-Template/issues)。
+
+## 许可证
+
+AGPL-3.0-only · Copyright (c) 2026 ChHsiching —— 见 [LICENSE](LICENSE)。`fonts/` 下的字体保持各自的 SIL OFL 1.1。
+
+- 使用（含公司内部使用）、修改、分发均免费；但分发或以本代码提供网络服务时，衍生作品须以 AGPL-3.0 开源。
+- 闭源商用须另行获取商业授权：hsichingchang@gmail.com
+
+### 贡献条款
+
+提交 PR 即表示你同意以 AGPL-3.0 授权你的贡献，并授予维护者在 AGPL 之外另行提供商业授权的权利（你的贡献始终以 AGPL 对所有人开放）。
